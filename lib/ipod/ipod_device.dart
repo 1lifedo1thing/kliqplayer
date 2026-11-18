@@ -88,6 +88,8 @@ class _IpodDeviceState extends State<IpodDevice> {
       return ours.contains(e.logicalKey) ? KeyEventResult.handled : KeyEventResult.ignored;
     }
     if (e is KeyDownEvent) _nav.touch();
+    // Touches › Autres attend une touche : elle est pour lui.
+    if (e is KeyDownEvent && _nav.captureKey(e.logicalKey)) return KeyEventResult.handled;
     // ← → se comportent comme les côtés de la molette : appui bref pour
     // changer de morceau, appui long pour avancer / reculer.
     final side = switch (e.logicalKey) {
@@ -300,17 +302,22 @@ class _IpodDeviceState extends State<IpodDevice> {
             if (m.hasScreen) Positioned.fromRect(
               rect: m.screen,
               // L'écran laisse passer la main jusqu'au boîtier.
-              child: IgnorePointer(child: ClipRRect(
-                borderRadius: BorderRadius.circular(m.screenCornerRadius),
-                child: FittedBox(
-                  child: SizedBox.fromSize(
-                    size: m.look.size,
-                    // Couche à part : l'écran s'anime (menus, Cover Flow,
-                    // progression) sans faire repeindre la coque autour.
-                    child: RepaintBoundary(child: IpodScreen(nav: _nav, player: widget.player, look: m.look)),
+              // (Sauf à l'accueil du premier lancement, où l'on clique dessus.)
+              child: ListenableBuilder(
+                listenable: _nav,
+                builder: (context, child) => IgnorePointer(ignoring: !_nav.welcoming, child: child),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(m.screenCornerRadius),
+                  child: FittedBox(
+                    child: SizedBox.fromSize(
+                      size: m.look.size,
+                      // Couche à part : l'écran s'anime (menus, Cover Flow,
+                      // progression) sans faire repeindre la coque autour.
+                      child: RepaintBoundary(child: IpodScreen(nav: _nav, player: widget.player, look: m.look)),
+                    ),
                   ),
                 ),
-              )),
+              ),
             ),
             if (glass != null)
               Positioned.fill(

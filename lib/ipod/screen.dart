@@ -8,6 +8,7 @@ import 'package:flutter/scheduler.dart';
 import '../core/player.dart';
 import '../core/strings.dart';
 import '../physics.dart';
+import 'click.dart';
 import 'coverflow.dart';
 import 'look.dart';
 import 'nav.dart';
@@ -224,6 +225,8 @@ class _IpodScreenState extends State<IpodScreen> with SingleTickerProviderStateM
     );
   }
 
+  bool _welcome(IpodPage p) => p is MenuPage && p.welcome;
+
   /// Les zones d'un menu scindé, si [p] en est un sur cet écran.
   ({Rect menu, Rect image})? _split(IpodPage p) =>
       p is MenuPage && p.kind == MenuKind.split ? widget.look.split(widget.look.size) : null;
@@ -234,7 +237,7 @@ class _IpodScreenState extends State<IpodScreen> with SingleTickerProviderStateM
     return parts != null && parts.image.top == 0 ? parts.menu.width / widget.look.size.width : 1;
   }
 
-  Widget _bar(IpodPage p) => widget.look.statusBar(
+  Widget _bar(IpodPage p) => _welcome(p) ? const SizedBox() : widget.look.statusBar(
         title: p.title,
         playing: widget.player.playing,
         hasTrack: widget.player.current != null,
@@ -259,9 +262,10 @@ class _IpodScreenState extends State<IpodScreen> with SingleTickerProviderStateM
   /// La page à sa place : sous la barre de titre, sauf un menu scindé, qui
   /// se place lui-même sur l'écran entier.
   Widget _framed(IpodPage p) =>
-      _split(p) != null ? _page(p) : Padding(padding: EdgeInsets.only(top: widget.look.barHeight), child: _page(p));
+      _split(p) != null || _welcome(p) ? _page(p) : Padding(padding: EdgeInsets.only(top: widget.look.barHeight), child: _page(p));
 
   Widget _page(IpodPage p) => switch (p) {
+        MenuPage() when p.welcome => _WelcomeView(page: p, nav: nav),
         MenuPage() => _MenuView(page: p, look: widget.look, player: widget.player, lit: _lit && screenPower.value),
         SearchPage() => _SearchView(page: p, look: widget.look),
         NowPlayingPage() => widget.look.nowPlaying(widget.player, nav.mode),
@@ -488,5 +492,87 @@ class _SearchView extends StatelessWidget {
           style: TextStyle(color: color, fontSize: i == SearchPage.done ? size * 0.82 : null),
         ),
     };
+  }
+}
+
+/// Une page de l'accueil du premier lancement, à la manière des réglages
+/// d'Apple : petit titre gras, une liste groupée à coins arrondis, filets
+/// entre les lignes, la sélection en bleu. On clique, ou on tourne la molette.
+class _WelcomeView extends StatelessWidget {
+  const _WelcomeView({required this.page, required this.nav});
+
+  final MenuPage page;
+  final IpodNav nav;
+
+  static const _ink = Color(0xFF1D1D1F);
+  static const _grey = Color(0xFF8E8E93);
+  static const _blue = Color(0xFF007AFF);
+  static const _ground = Color(0xFFF2F2F7);
+  static const _hair = Color(0xFFD1D1D6);
+
+  @override
+  Widget build(BuildContext context) {
+    final entries = page.entries;
+    return ColoredBox(
+      color: _ground,
+      child: LayoutBuilder(builder: (context, box) {
+        final h = box.maxHeight, w = box.maxWidth, row = h * 0.1, side = w * 0.07;
+        final text = TextStyle(fontFamily: 'Noto Sans', fontSize: row * 0.4, height: 1, color: _ink);
+        return Padding(
+          padding: EdgeInsets.symmetric(horizontal: side),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(
+                height: h * 0.2,
+                child: Center(
+                  child: Text(page.title, style: text.copyWith(fontSize: row * 0.52, fontWeight: FontWeight.w600, letterSpacing: -0.2)),
+                ),
+              ),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(row * 0.22),
+                child: ColoredBox(
+                  color: Colors.white,
+                  child: Column(children: [
+                    for (var i = 0; i < entries.length && i < 6; i++) ...[
+                      if (i > 0) Container(height: 0.5, margin: EdgeInsets.only(left: side), color: _hair),
+                      // Survoler une ligne la sélectionne ; cliquer la valide.
+                      MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        onEnter: (_) => nav.scroll(i - page.selected),
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () {
+                            WheelClick.instance.play();
+                            nav.tap(i);
+                          },
+                          child: _row(entries[i], i == page.selected, row, side, text),
+                        ),
+                      ),
+                    ],
+                  ]),
+                ),
+              ),
+            ],
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _row(MenuEntry entry, bool selected, double height, double side, TextStyle text) {
+    final value = entry.value?.call();
+    return Container(
+      height: height,
+      color: selected ? _blue : null,
+      padding: EdgeInsets.symmetric(horizontal: side),
+      child: Row(children: [
+        Expanded(
+          child: Text(entry.label,
+              style: selected ? text.copyWith(color: Colors.white) : text, maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
+        if (value != null) Text(value, style: text.copyWith(color: selected ? Colors.white70 : _grey)),
+      ]),
+    );
   }
 }

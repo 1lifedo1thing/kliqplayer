@@ -1,9 +1,11 @@
 import 'dart:io';
 
 import 'package:clock/clock.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lecteur/core/library.dart';
 import 'package:lecteur/core/player.dart';
+import 'package:lecteur/core/settings.dart';
 import 'package:lecteur/core/source.dart';
 import 'package:lecteur/core/strings.dart';
 import 'package:lecteur/ipod/click.dart';
@@ -33,6 +35,38 @@ void _open(IpodNav nav, String label) {
 }
 
 void main() {
+  test('premier lancement : langue, puis touches au choix, puis le menu principal', () {
+    addTearDown(() {
+      Lang.set(Lang.fr);
+      Settings.setString('ipod.keys', 'hjkl');
+    });
+    final nav = IpodNav(_player(), look: const ClassicLook(), welcome: true);
+    expect(nav.page.title, 'Language');
+    _open(nav, 'English');
+    expect(nav.page.title, 'Keys');
+    nav.menu(); // on peut revenir changer de langue
+    _open(nav, 'Français');
+    expect(nav.page.title, 'Touches');
+    _open(nav, 'Autres');
+    expect(nav.captureKey(LogicalKeyboardKey.arrowUp), isFalse, reason: 'réservée');
+    for (final k in [LogicalKeyboardKey.keyI, LogicalKeyboardKey.keyI, LogicalKeyboardKey.keyK, LogicalKeyboardKey.keyL]) {
+      expect(nav.captureKey(k), isTrue);
+    }
+    expect((nav.page as MenuPage).selected, 3, reason: 'I pris deux fois : compté une fois');
+    nav.captureKey(LogicalKeyboardKey.keyJ);
+    expect(nav.page.title, 'Musique');
+    _open(nav, 'Musique locale');
+    expect(nav.stack.map((p) => p.title), ['Lecteur', 'Réglages', 'Bibliothèque', 'Musique locale']);
+    nav.menu();
+    nav.menu();
+    nav.menu();
+    expect(nav.page.title, 'Lecteur');
+    expect(nav.keys.label, 'I K L J');
+    expect(KeyLayout.load().back, LogicalKeyboardKey.keyJ);
+    nav.menu();
+    expect(nav.page.title, 'Lecteur', reason: 'plus de retour vers l\'accueil');
+  });
+
   test('une ligne disparaît d\'un menu : la sélection y reste', () {
     final player = _player()..notice = 'Erreur';
     final nav = IpodNav(player, look: const ClassicLook());
@@ -206,6 +240,7 @@ void main() {
     final nav = IpodNav(player, look: const ClassicLook());
     _open(nav, 'Réglages');
     _open(nav, 'Bibliothèque');
+    _open(nav, 'Musique locale');
     _open(nav, 'Dossier actuel');
     final labels = (nav.page as MenuPage).entries.map((e) => e.label).toList();
     expect(labels, ['Utiliser ce dossier', 'Jazz', 'Rock'], reason: 'triés, sans les dossiers cachés');
@@ -228,6 +263,7 @@ void main() {
     final nav = IpodNav(player, look: const ClassicLook());
     _open(nav, 'Réglages');
     _open(nav, 'Bibliothèque');
+    _open(nav, 'Musique locale');
     _open(nav, 'Dossier actuel');
     final use = (nav.page as MenuPage).entries.first;
     expect(use.checked!(), isFalse, reason: 'on écoute Spotify, pas ce dossier');
@@ -237,20 +273,28 @@ void main() {
     expect(player.source.id, 'local');
   });
 
-  test('Bibliothèque : les services en ligne en haut, sans /mnt', () {
+  test('Bibliothèque : Spotify ou musique locale, cochée celle qu\'on écoute', () {
     final player = PlayerController.preview(accounts: [_FakeAccount()]);
     final nav = IpodNav(player, look: const ClassicLook());
     _open(nav, 'Réglages');
     _open(nav, 'Bibliothèque');
     final labels = (nav.page as MenuPage).entries.map((e) => e.label).toList();
-    expect(labels.take(3), ['Spotify', 'Dossier actuel', 'Dossier personnel']);
-    expect(labels, isNot(contains('/mnt')));
+    expect(labels, ['Spotify', 'Musique locale']);
+    expect((nav.page as MenuPage).entries.last.checked!(), isTrue, reason: 'on écoute les fichiers');
+    _open(nav, 'Musique locale');
+    expect((nav.page as MenuPage).entries.map((e) => e.label), ['Dossier actuel', 'Sélectionner un dossier']);
+    _open(nav, 'Sélectionner un dossier');
+    expect((nav.page as MenuPage).entries.map((e) => e.label), isNot(contains('/mnt')));
   });
 
   test('Tonalité du clic : on entend chaque tonalité en parcourant, valider la garde', () {
     final click = WheelClick.instance;
     final nav = IpodNav(_player(), look: const ClassicLook());
     _open(nav, 'Réglages');
+    _open(nav, 'Commandes');
+    expect((nav.page as MenuPage).entries.map((e) => e.label), ['Clic', 'Touches']);
+    _open(nav, 'Clic');
+    expect((nav.page as MenuPage).entries.map((e) => e.label), ['Clic', 'Tonalité du clic']);
     _open(nav, 'Tonalité du clic');
     expect(click.preview, 2, reason: 'arrive sur la tonalité en cours');
     nav.scroll(2);
@@ -273,7 +317,7 @@ void main() {
     expect(nav.page.title, 'Language');
     nav.menu();
     expect(nav.page.title, 'Settings');
-    expect((nav.page as MenuPage).entries.map((e) => e.label), contains('Click Tone'));
+    expect((nav.page as MenuPage).entries.map((e) => e.label), contains('Controls'));
     nav.menu();
     expect((nav.page as MenuPage).entries.first.label, 'Music');
   });

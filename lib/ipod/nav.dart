@@ -71,7 +71,7 @@ class MenuEntry {
 
 class MenuPage extends IpodPage {
   MenuPage(this.title, List<MenuEntry> Function() builder,
-      {this.live = false, this.music = false, this.kind = MenuKind.normal})
+      {this.live = false, this.music = false, this.welcome = false, this.kind = MenuKind.normal})
       : _builder = builder;
 
   final MenuKind kind;
@@ -86,6 +86,10 @@ class MenuPage extends IpodPage {
   /// Montre des albums ou des morceaux de la bibliothèque : ne vaut plus
   /// rien quand elle change.
   final bool music;
+
+  /// Page de l'accueil du premier lancement : dessinée à part (grands
+  /// boutons, comme le site), cliquable à la souris.
+  final bool welcome;
   List<MenuEntry>? _cache;
 
   List<MenuEntry> get entries {
@@ -265,15 +269,34 @@ String backlightLabel(int seconds) => seconds == 0 ? tr('Toujours allumé') : tr
 
 /// Les lettres qui pilotent le baladeur, en plus des flèches : monter,
 /// descendre, entrer (valider) et revenir (MENU).
-enum KeyLayout {
-  hjkl('H J K L', up: LogicalKeyboardKey.keyK, down: LogicalKeyboardKey.keyJ, enter: LogicalKeyboardKey.keyL, back: LogicalKeyboardKey.keyH),
-  wasd('W A S D', up: LogicalKeyboardKey.keyW, down: LogicalKeyboardKey.keyS, enter: LogicalKeyboardKey.keyD, back: LogicalKeyboardKey.keyA),
-  zqsd('Z Q S D', up: LogicalKeyboardKey.keyZ, down: LogicalKeyboardKey.keyS, enter: LogicalKeyboardKey.keyD, back: LogicalKeyboardKey.keyQ);
+class KeyLayout {
+  const KeyLayout(this.name, this.label, {required this.up, required this.down, required this.enter, required this.back});
 
-  const KeyLayout(this.label, {required this.up, required this.down, required this.enter, required this.back});
+  /// Quatre touches choisies une à une (Touches › Autres) : haut, bas, avant, arrière.
+  KeyLayout.custom(List<LogicalKeyboardKey> k)
+      : this('custom', [for (final x in k) x.keyLabel.toUpperCase()].join(' '), up: k[0], down: k[1], enter: k[2], back: k[3]);
 
+  static const wasd = KeyLayout('wasd', 'W A S D', up: LogicalKeyboardKey.keyW, down: LogicalKeyboardKey.keyS, enter: LogicalKeyboardKey.keyD, back: LogicalKeyboardKey.keyA);
+  static const zqsd = KeyLayout('zqsd', 'Z Q S D', up: LogicalKeyboardKey.keyZ, down: LogicalKeyboardKey.keyS, enter: LogicalKeyboardKey.keyD, back: LogicalKeyboardKey.keyQ);
+  static const hjkl = KeyLayout('hjkl', 'H J K L', up: LogicalKeyboardKey.keyK, down: LogicalKeyboardKey.keyJ, enter: LogicalKeyboardKey.keyL, back: LogicalKeyboardKey.keyH);
+  static const presets = [wasd, zqsd, hjkl];
+
+  /// Nom gardé dans les préférences (« custom » : les touches sont à côté, dans ipod.customKeys).
+  final String name;
   final String label;
   final LogicalKeyboardKey up, down, enter, back;
+
+  /// Les touches gardées dans les préférences ; H J K L sinon.
+  static KeyLayout load() {
+    final name = Settings.getString('ipod.keys');
+    if (name == 'custom') {
+      final ids = [for (final s in (Settings.getString('ipod.customKeys') ?? '').split(',')) int.tryParse(s)];
+      if (ids.length == 4 && !ids.contains(null)) {
+        return KeyLayout.custom([for (final id in ids) LogicalKeyboardKey.findKeyByKeyId(id!) ?? LogicalKeyboardKey(id)]);
+      }
+    }
+    return presets.firstWhere((p) => p.name == name, orElse: () => hjkl);
+  }
 }
 
 class NowPlayingPage extends IpodPage {
@@ -284,10 +307,11 @@ class NowPlayingPage extends IpodPage {
 /// Navigation dans les menus, pilotée par la molette et le clavier.
 /// L'écran ne fait que dessiner cet état en l'animant.
 class IpodNav extends ChangeNotifier {
-  IpodNav(this.player, {required this.look}) : coverFlow = look.coverFlow {
-    stack = [_root()];
+  IpodNav(this.player, {required this.look, bool? welcome}) : coverFlow = look.coverFlow {
+    // Premier lancement : la langue, puis les touches, avant le menu principal.
+    stack = [welcome ?? (!JsonStore.inTest && Settings.getString('welcome') == null) ? _welcome() : _root()];
     backlight = int.tryParse(Settings.getString('ipod.backlight') ?? '') ?? 10;
-    keys = KeyLayout.values.asNameMap()[Settings.getString('ipod.keys')] ?? KeyLayout.hjkl;
+    keys = KeyLayout.load();
     WheelClick.instance.enabled = Settings.getString('ipod.clicker') != 'off';
     WheelClick.instance.pitch =
         (int.tryParse(Settings.getString('ipod.clickPitch') ?? '') ?? 2).clamp(0, WheelClick.pitches.length - 1);
@@ -740,7 +764,7 @@ class IpodNav extends ChangeNotifier {
         MenuEntry(
           tr('Bibliothèque'),
           value: () => player.loading ? tr('Lecture…') : _sourceName(),
-          open: _places,
+          open: _library,
         ),
         MenuEntry(
           tr('Lecture aléatoire'),
@@ -757,6 +781,42 @@ class IpodNav extends ChangeNotifier {
           action: () => player.setRepeat(RepeatMode.values[(player.repeat.index + 1) % RepeatMode.values.length]),
         ),
         MenuEntry(tr('Rétroéclairage'), value: () => backlight == 0 ? tr('Allumé') : '$backlight s', open: _backlightMenu),
+        MenuEntry(tr('Commandes'), open: _controlsMenu),
+        if (Platform.isWindows) MenuEntry(tr('Fenêtre'), open: _windowMenu),
+        MenuEntry(tr('Langue'), value: () => Lang.current.nativeName, open: _languageMenu),
+      ]);
+
+  /// Réglages › Commandes : la molette (clic) et le clavier (touches).
+  MenuPage _controlsMenu() => MenuPage(tr('Commandes'), live: true, () => [
+        MenuEntry(tr('Clic'), value: () => WheelClick.instance.enabled ? tr('Haut-parleur') : tr('Non'), open: _clickMenu),
+        MenuEntry(tr('Touches'), value: () => keys.label, open: _keysMenu),
+      ]);
+
+  /// Réglages › Fenêtre (Windows).
+  MenuPage _windowMenu() => MenuPage(tr('Fenêtre'), live: true, () => [
+        // Sous Windows, rien ne réserve de place à l'iPod : on peut le garder
+        // par-dessus les autres fenêtres.
+        MenuEntry(
+          tr('Premier plan'),
+          value: () => windowOnTop.value ? tr('Oui') : tr('Non'),
+          action: () {
+            windowOnTop.value = !windowOnTop.value;
+            Settings.setString('window.top', windowOnTop.value ? 'on' : 'off');
+          },
+        ),
+        // Et le poser où l'on veut, plutôt qu'à l'une de ses trois places.
+        MenuEntry(
+          tr('Position'),
+          value: () => ipodFree.value ? tr('Libre') : tr('Fixe'),
+          action: () {
+            ipodFree.value = !ipodFree.value;
+            Settings.setString('window.free', ipodFree.value ? 'on' : 'off');
+          },
+        ),
+      ]);
+
+  /// Réglages › Clic : l'allumer ou l'éteindre, et sa tonalité.
+  MenuPage _clickMenu() => MenuPage(tr('Clic'), live: true, () => [
         MenuEntry(
           tr('Clic'),
           value: () => WheelClick.instance.enabled ? tr('Haut-parleur') : tr('Non'),
@@ -771,45 +831,117 @@ class IpodNav extends ChangeNotifier {
           value: () => tr(WheelClick.pitchNames[WheelClick.instance.pitch]),
           open: _pitchMenu,
         ),
-        MenuEntry(tr('Touches'), value: () => keys.label, open: _keysMenu),
-        // Sous Windows, rien ne réserve de place à l'iPod : on peut le garder
-        // par-dessus les autres fenêtres.
-        if (Platform.isWindows)
-          MenuEntry(
-            tr('Premier plan'),
-            value: () => windowOnTop.value ? tr('Oui') : tr('Non'),
-            action: () {
-              windowOnTop.value = !windowOnTop.value;
-              Settings.setString('window.top', windowOnTop.value ? 'on' : 'off');
-            },
-          ),
-        // Et le poser où l'on veut, plutôt qu'à l'une de ses trois places.
-        if (Platform.isWindows)
-          MenuEntry(
-            tr('Position'),
-            value: () => ipodFree.value ? tr('Libre') : tr('Fixe'),
-            action: () {
-              ipodFree.value = !ipodFree.value;
-              Settings.setString('window.free', ipodFree.value ? 'on' : 'off');
-            },
-          ),
-        MenuEntry(tr('Langue'), value: () => Lang.current.nativeName, open: _languageMenu),
       ]);
 
   /// Les lettres de déplacement choisies (Réglages › Touches).
   late KeyLayout keys;
 
-  MenuPage _keysMenu() {
-    final page = MenuPage(tr('Touches'), live: true, () => [
-          for (final k in KeyLayout.values)
-            MenuEntry(k.label, checked: () => k == keys, action: () {
-              keys = k;
-              Settings.setString('ipod.keys', k.name);
-              menu(); // choisi : on revient aux Réglages
+  /// [done] : ce qui suit le choix (retour aux Réglages ; au premier
+  /// lancement, le menu principal).
+  MenuPage _keysMenu({VoidCallback? done}) {
+    final then = done ?? _backToSettings;
+    final page = MenuPage(tr('Touches'), live: true, welcome: done != null, () => [
+          for (final k in KeyLayout.presets)
+            MenuEntry(k.label, checked: () => k.name == keys.name, action: () {
+              _setKeys(k);
+              then();
             }),
+          MenuEntry(tr('Autres'), value: keys.name == 'custom' ? () => keys.label : null, open: () => _capture(then, welcome: done != null)),
         ]);
-    _focus(page, keys.index);
+    final at = KeyLayout.presets.indexWhere((k) => k.name == keys.name);
+    _focus(page, at < 0 ? KeyLayout.presets.length : at);
     return page;
+  }
+
+  void _setKeys(KeyLayout k) {
+    keys = k;
+    Settings.setString('ipod.keys', k.name);
+    if (k.name == 'custom') Settings.setString('ipod.customKeys', [k.up, k.down, k.enter, k.back].map((x) => x.keyId).join(','));
+  }
+
+  // --- Touches › Autres : quatre touches au choix --------------------------
+
+  MenuPage? _capturePage;
+  List<LogicalKeyboardKey?> _captured = const [];
+  VoidCallback? _captureDone;
+
+  /// Touches qui gardent leur rôle (flèches, Entrée, Retour arrière, Espace, T, Échap).
+  static final _reserved = {
+    LogicalKeyboardKey.arrowUp, LogicalKeyboardKey.arrowDown, LogicalKeyboardKey.arrowLeft, LogicalKeyboardKey.arrowRight,
+    LogicalKeyboardKey.enter, LogicalKeyboardKey.numpadEnter, LogicalKeyboardKey.backspace, LogicalKeyboardKey.space,
+    LogicalKeyboardKey.keyT, LogicalKeyboardKey.escape,
+  };
+
+  /// Quatre lignes ; la ligne sélectionnée attend sa touche (« ? »).
+  MenuPage _capture(VoidCallback done, {bool welcome = false}) {
+    _captured = List.filled(4, null);
+    _captureDone = done;
+    const names = ['Haut', 'Bas', 'Avant', 'Arrière'];
+    return _capturePage = MenuPage(tr('Autres'), live: true, welcome: welcome, () => [
+          for (var i = 0; i < 4; i++) MenuEntry(tr(names[i]), value: () => _captured[i]?.keyLabel.toUpperCase() ?? '?'),
+        ]);
+  }
+
+  /// Une touche enfoncée pendant Touches › Autres : elle va à la ligne
+  /// sélectionnée. Faux si la page n'attend rien (ou touche réservée).
+  bool captureKey(LogicalKeyboardKey key) {
+    final p = _capturePage;
+    if (p == null || !identical(page, p) || _reserved.contains(key)) return false;
+    if (_captured.indexOf(key) case final at when at >= 0 && at != p.selected) return true; // déjà prise
+    _captured[p.selected] = key;
+    final next = _captured.indexOf(null);
+    if (next < 0) {
+      _setKeys(KeyLayout.custom(_captured.cast()));
+      _capturePage = null;
+      _captureDone!();
+    } else {
+      scroll(next - p.selected);
+      notifyListeners();
+    }
+    return true;
+  }
+
+  // --- Premier lancement ---------------------------------------------------
+
+  /// Comme un iPod qu'on allume pour la première fois : la langue, puis les touches.
+  MenuPage _welcome() => MenuPage('Language', welcome: true, () => [
+        for (final l in Lang.values)
+          MenuEntry(l.nativeName, action: () {
+            Lang.set(l);
+            _push(_keysMenu(done: () => _push(_welcomeSource())));
+          }),
+      ]);
+
+  /// Dernier écran de l'accueil : d'où vient la musique. On arrive ensuite
+  /// dans Réglages › Bibliothèque › ce choix, pour se connecter ou choisir un dossier.
+  MenuPage _welcomeSource() => MenuPage(tr('Musique'), welcome: true, () => [
+        for (final a in player.accounts) MenuEntry(a.label, action: () => _endWelcome([_library(), _account(a)])),
+        MenuEntry(tr('Musique locale'), action: () => _endWelcome([_library(), _local()])),
+      ]);
+
+  /// L'écran montre l'accueil : il prend les clics.
+  bool get welcoming => page is MenuPage && (page as MenuPage).welcome;
+
+  /// Clic sur la ligne [i] de la page : la sélectionne et la valide.
+  void tap(int i) {
+    final p = page;
+    if (p is! MenuPage) return;
+    scroll(i - p.selected);
+    select();
+  }
+
+  /// [then] : les pages ouvertes par-dessus Réglages (le choix de la musique).
+  void _endWelcome([List<MenuPage> then = const []]) {
+    Settings.setString('welcome', 'fait');
+    leaving = page;
+    stack
+      ..clear()
+      ..add(_root());
+    if (then.isNotEmpty) stack.addAll([_settings(), ...then]);
+    direction = 1;
+    transition++;
+    _syncPreview();
+    notifyListeners();
   }
 
   /// Page Tonalité du clic : parcourir la liste fait entendre chaque
@@ -906,15 +1038,24 @@ class IpodNav extends ChangeNotifier {
     return _folderName(player.musicDir);
   }
 
-  /// Points de départ : le dossier actuel, le dossier personnel, les disques
+  /// Deux choix : le service en ligne ou les fichiers ; coché, celui qu'on écoute.
+  MenuPage _library() => MenuPage(tr('Bibliothèque'), live: true, () => [
+        for (final a in player.accounts)
+          MenuEntry(a.label, checked: () => player.source.id == a.sourceId, open: () => _account(a)),
+        MenuEntry(tr('Musique locale'), checked: () => !player.accounts.any((a) => a.sourceId == player.source.id), open: _local),
+      ]);
+
+  MenuPage _local() => MenuPage(tr('Musique locale'), () => [
+        MenuEntry(tr('Dossier actuel'), value: () => _folderName(player.musicDir), open: () => _folder(player.musicDir)),
+        MenuEntry(tr('Sélectionner un dossier'), open: _places),
+      ]);
+
+  /// Points de départ : le dossier personnel, les disques
   /// branchés, la racine (sous Windows : les lecteurs C:, D:…). Cherchés une
   /// fois à l'ouverture de la page, pas à chaque image.
-  MenuPage _places() => MenuPage(tr('Bibliothèque'), () {
+  MenuPage _places() => MenuPage(tr('Dossiers'), () {
         final user = Platform.environment['USER'] ?? '';
         return [
-          // Les services en ligne d'abord (Spotify…), puis les dossiers.
-          for (final a in player.accounts) MenuEntry(a.label, open: () => _account(a)),
-          MenuEntry(tr('Dossier actuel'), value: () => _folderName(player.musicDir), open: () => _folder(player.musicDir)),
           MenuEntry(tr('Dossier personnel'), open: () => _folder(homeDir())),
           if (Platform.isWindows)
             for (final drive in windowsDrives()) MenuEntry(drive, open: () => _folder(drive))
