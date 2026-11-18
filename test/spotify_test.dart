@@ -294,7 +294,8 @@ void cacheTests() {
     final fake = _FakeSpotify();
     // Premier lancement : rien de gardé, on demande à Spotify et on garde.
     final first = await SpotifySource(_account(fake), cache: file).load();
-    await pumpEventQueue();
+    // (Écrite sur le disque en arrière-plan : lente sur les machines de GitHub.)
+    await until(file.existsSync);
     expect(file.existsSync(), isTrue);
 
     // Deuxième lancement, la même : servie sans attendre, rien à signaler.
