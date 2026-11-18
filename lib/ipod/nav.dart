@@ -653,12 +653,12 @@ class IpodNav extends ChangeNotifier {
   /// assortie à l'iPod, les pochettes variant d'un morceau à l'autre. Le temps de lire les pochettes, une
   /// page « Chargement… ».
   Future<void> _colorShuffle(Color color) async {
-    final wait = MenuPage(tr('Couleur au hasard'), () => [MenuEntry(tr('Chargement…'))]);
+    final wait = MenuPage(tr('Morceau au hasard (couleur)'), () => [MenuEntry(tr('Chargement…'))]);
     _push(wait);
     final list = spreadAlbums(await player.albumsMatching(color));
     if (!identical(page, wait)) return; // on est reparti entre-temps
     stack.removeLast();
-    if (list.isEmpty) return _push(MenuPage(tr('Couleur au hasard'), () => [MenuEntry(tr('Aucun élément'))]));
+    if (list.isEmpty) return _push(MenuPage(tr('Morceau au hasard (couleur)'), () => [MenuEntry(tr('Aucun élément'))]));
     _play(list, 0);
     _colorQueue = list;
   }
@@ -684,7 +684,7 @@ class IpodNav extends ChangeNotifier {
           if (player.tracks.isEmpty) return;
           _play(player.tracks, math.Random().nextInt(player.tracks.length));
         }),
-        if (coverColor case final color?) MenuEntry(tr('Couleur au hasard'), action: () => _colorShuffle(color)),
+        if (coverColor case final color?) MenuEntry(tr('Morceau au hasard (couleur)'), action: () => _colorShuffle(color)),
         // Sur les écrans monochromes, le rétroéclairage s'éteint d'ici.
         if (look.mono) MenuEntry(tr('Rétroéclairage'), action: darken),
         if (player.current != null)

@@ -42,7 +42,7 @@ const _strings = <String, List<String>>{
   'Musique': ['Music', 'Música', 'Musik'],
   'Réglages': ['Settings', 'Ajustes', 'Einstellungen'],
   'Morceau au hasard': ['Shuffle Songs', 'Canción aleatoria', 'Zufallstitel'],
-  'Couleur au hasard': ['Color Shuffle', 'Aleatorio por color', 'Farb-Zufall'],
+  'Morceau au hasard (couleur)': ['Shuffle Songs (Color)', 'Canción aleatoria (color)', 'Zufallstitel (Farbe)'],
   'En lecture': ['Now Playing', 'En reproducción', 'Aktueller Titel'],
   'Listes de lecture': ['Playlists', 'Listas', 'Playlists'],
   'Artistes': ['Artists', 'Artistas', 'Interpreten'],

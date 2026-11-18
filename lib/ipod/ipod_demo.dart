@@ -57,7 +57,7 @@ extension _Demo on _IpodStageState {
         await _demoTint(model(id));
       } else if (s['colorShuffle'] == true) {
         await _demoHome();
-        await _demoGo(tr('Couleur au hasard'));
+        await _demoGo(tr('Morceau au hasard (couleur)'));
         while (_nav.page is! NowPlayingPage) {
           await wait(50);
         }
