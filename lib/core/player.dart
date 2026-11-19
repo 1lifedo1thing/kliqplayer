@@ -203,6 +203,7 @@ class PlayerController extends ChangeNotifier {
     _listCovers.clear();
     _coverLoads.clear();
     _coverPixels.clear();
+    _coverShares.clear();
     _coverGeneration++;
     loading = false;
     notifyListeners();
@@ -426,9 +427,14 @@ class PlayerController extends ChangeNotifier {
   final Map<int, Uint8List?> _coverPixels = {};
 
   /// Les albums (leurs morceaux) dont la pochette est assortie à [color] (la
-  /// teinte de l'iPod). La première fois, toutes les pochettes sont lues :
+  /// teinte du baladeur). La première fois, toutes les pochettes sont lues :
   /// quelques secondes sur une grande bibliothèque (téléchargées, sur Spotify).
-  Future<List<List<Track>>> albumsMatching(Color color) async {
+  /// Part de chaque teinte dans chaque pochette, calculée une fois.
+  final Map<(int, Color), double> _coverShares = {};
+
+  /// [palette] : toutes les teintes du modèle ; un album y rejoint aussi
+  /// celle qui domine sa pochette (voir [coverPick]).
+  Future<List<List<Track>>> albumsMatching(Color color, {List<Color> palette = const []}) async {
     final generation = _coverGeneration;
     final todo = [for (var i = 0; i < albums.length; i++) if (!_coverPixels.containsKey(i)) i];
     // Huit à la fois : chacune est lue dans un isolate, ou téléchargée.
@@ -442,13 +448,14 @@ class PlayerController extends ChangeNotifier {
       ]);
       if (generation != _coverGeneration) return const []; // autre bibliothèque entre-temps
     }
+    final colors = palette.contains(color) ? palette : [color];
+    final ids = [for (var i = 0; i < albums.length; i++) if (_coverPixels[i] != null) i]; // sans pochette : exclus
     final shares = [
-      for (var i = 0; i < albums.length; i++)
-        if (_coverPixels[i] case final px?) (i, coverShare(px, color)),
-    ]..sort((a, b) => b.$2.compareTo(a.$2));
-    final picked = shares.take(coverMatchCount([for (final s in shares) s.$2]));
+      for (final i in ids) [for (final c in colors) _coverShares[(i, c)] ??= coverShare(_coverPixels[i]!, c)],
+    ];
     return [
-      for (final (i, _) in picked) tracks.sublist(albums[i].firstIndex, albums[i].firstIndex + albums[i].trackCount),
+      for (final k in coverPick(shares, colors.indexOf(color)))
+        tracks.sublist(albums[ids[k]].firstIndex, albums[ids[k]].firstIndex + albums[ids[k]].trackCount),
     ];
   }
 
@@ -589,7 +596,7 @@ class PlayerController extends ChangeNotifier {
   }
 
   /// Garde le morceau en cours et remplace la suite de la file par
-  /// [upcoming] (Couleur au hasard, quand la teinte de l'iPod change). Faux
+  /// [upcoming] (Couleur au hasard, quand la teinte du baladeur change). Faux
   /// si le moteur ne sait pas le faire (aléatoire de mpv) : rien ne change.
   Future<bool> replaceUpcoming(List<Track> upcoming) async {
     final now = current;

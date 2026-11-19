@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lecteur/ipod/classic.dart';
-import 'package:lecteur/ipod/ipod.dart';
-import 'package:lecteur/ipod/nanos.dart';
+import 'package:lecteur/device/classic.dart';
+import 'package:lecteur/device/device.dart';
+import 'package:lecteur/device/nanos.dart';
 
 void main() {
   const screen = Rect.fromLTWH(0, 0, 1920, 1080);

@@ -39,7 +39,7 @@ Path=$dir
 Icon=kliqplayer
 Terminal=false
 Categories=AudioVideo;Audio;Player;
-Keywords=ipod;music;player;spotify;
+Keywords=music;player;spotify;
 StartupWMClass=dev.paulux.lecteur
 EOF
 refresh

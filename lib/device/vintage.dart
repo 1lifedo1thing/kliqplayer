@@ -9,15 +9,19 @@ import 'mini.dart';
 import 'model.dart';
 import 'wheel.dart';
 
-/// Écran monochrome des premières générations : 160 × 128, 6 lignes.
+/// Écran monochrome de la 4e génération : 160 × 128, 6 lignes.
 const _monoLook = MiniLook(size: Size(160, 128), visibleRows: 6);
 
 /// Les deux premières générations : la police Chicago, pas encore de notes.
 const _chicagoLook = MiniLook(size: Size(160, 128), visibleRows: 6, font: 'ChicagoFLF', ratings: false);
 
+/// La 3e génération garde la police Chicago (photo officielle), avec
+/// les notes en plus.
+const _chicagoRatedLook = MiniLook(size: Size(160, 128), visibleRows: 6, font: 'ChicagoFLF');
+
 /// La 1re génération (2001) : molette mécanique qui tourne vraiment,
 /// entourée de quatre boutons, écran monochrome, façade blanche.
-class FirstGenModel extends IpodModel {
+class FirstGenModel extends DeviceModel {
   const FirstGenModel();
 
   // ≈ 6,67 unités par mm (61,8 × 102 mm).
@@ -60,15 +64,15 @@ class FirstGenModel extends IpodModel {
   @override
   WheelStyle get wheel => const WheelStyle(
         radius: 172,
-        buttonRadius: 62,
-        innerRadius: 123,
-        labelInset: 0.86,
-        labelSize: 17,
+        buttonRadius: 49,
+        innerRadius: 138,
+        labelInset: 0.9,
+        labelSize: 15,
         menuLabel: 'menu',
         labelSpacing: 1,
         iconScale: 0.75,
         label: Color(0xFF9A9EA3),
-        ring: [Color(0xFFF4F5F6), Color(0xFFE6E8EA), Color(0xFFD8DBDE)],
+        ring: [Color(0xFFF9F9FA), Color(0xFFF0F1F2), Color(0xFFE4E6E8)],
         inner: [Color(0xFFFBFBFC), Color(0xFFEEEFF1), Color(0xFFDFE1E4)],
         groove: Color(0xFFB9BCC0),
       );
@@ -90,7 +94,7 @@ class FirstGenModel extends IpodModel {
 /// La 2e génération (2002) : même boîtier que la première, mais la molette
 /// est tactile (elle ne tourne plus), toujours entourée de ses quatre
 /// boutons.
-class SecondGenModel extends IpodModel {
+class SecondGenModel extends DeviceModel {
   const SecondGenModel();
 
   static const Size _size = FirstGenModel._size;
@@ -134,16 +138,16 @@ class SecondGenModel extends IpodModel {
   @override
   WheelStyle get wheel => const WheelStyle(
         radius: 172,
-        buttonRadius: 62,
-        innerRadius: 123,
+        buttonRadius: 49,
+        innerRadius: 138,
         turns: false,
-        labelInset: 0.86,
-        labelSize: 17,
+        labelInset: 0.9,
+        labelSize: 15,
         menuLabel: 'menu',
         labelSpacing: 1,
         iconScale: 0.75,
         label: Color(0xFF9A9EA3),
-        ring: [Color(0xFFF4F5F6), Color(0xFFE6E8EA), Color(0xFFD8DBDE)],
+        ring: [Color(0xFFF9F9FA), Color(0xFFF0F1F2), Color(0xFFE4E6E8)],
         inner: [Color(0xFFFDFDFD), Color(0xFFF3F4F5), Color(0xFFE6E8EA)],
         groove: Color(0xFFC3C6CA),
       );
@@ -163,7 +167,7 @@ class SecondGenModel extends IpodModel {
 
 /// La 3e génération (2003) : molette tactile sans inscriptions, quatre
 /// boutons ronds alignés au-dessus, rétroéclairés en orange.
-class ThirdGenModel extends IpodModel {
+class ThirdGenModel extends DeviceModel {
   const ThirdGenModel();
 
   // ≈ 6,67 unités par mm (61,8 × 104 mm).
@@ -209,15 +213,15 @@ class ThirdGenModel extends IpodModel {
         buttonRadius: 52,
         labels: false,
         sideClicks: false,
-        ring: [Color(0xFFF1F2F3), Color(0xFFE5E7E9), Color(0xFFD9DCDF)],
+        ring: [Color(0xFFF9F9FA), Color(0xFFF1F2F3), Color(0xFFE6E8EA)],
       );
 
   @override
-  List<IpodButton> get buttons => const [
-        IpodButton(WheelZone.previous, Offset(83, 318), 27),
-        IpodButton(WheelZone.menu, Offset(165, 318), 27),
-        IpodButton(WheelZone.playPause, Offset(247, 318), 27),
-        IpodButton(WheelZone.next, Offset(329, 318), 27),
+  List<DeviceButton> get buttons => const [
+        DeviceButton(WheelZone.previous, Offset(72, 334), 37),
+        DeviceButton(WheelZone.menu, Offset(161, 334), 37),
+        DeviceButton(WheelZone.playPause, Offset(251, 334), 37),
+        DeviceButton(WheelZone.next, Offset(340, 334), 37),
       ];
 
   /// En haut à gauche.
@@ -225,11 +229,11 @@ class ThirdGenModel extends IpodModel {
   HoldSwitch? get hold => const HoldSwitch(82);
 
   @override
-  CustomPainter buttonPainter(IpodButton button, {required bool pressed}) =>
+  CustomPainter buttonPainter(DeviceButton button, {required bool pressed}) =>
       _BacklitButtonPainter(button.zone, pressed);
 
   @override
-  ScreenLook get look => _monoLook;
+  ScreenLook get look => _chicagoRatedLook;
 
   @override
   CustomPainter get body => const _WhiteBodyPainter(_size, _radius, _screen);
@@ -251,8 +255,8 @@ enum FourthGenColor {
 }
 
 /// La 4e génération (2004) : la molette cliquable du Mini sur le grand
-/// iPod, inscriptions sur la molette, écran monochrome.
-class FourthGenModel extends IpodModel {
+/// baladeur, inscriptions sur la molette, écran monochrome.
+class FourthGenModel extends DeviceModel {
   const FourthGenModel([this.color = FourthGenColor.blanc]);
 
   final FourthGenColor color;
@@ -356,9 +360,9 @@ class FourthGenModel extends IpodModel {
   int get hashCode => color.hashCode;
 }
 
-/// L'iPod photo (fin 2004) : le boîtier de la 4e génération, molette
+/// Le baladeur photo (fin 2004) : le boîtier de la 4e génération, molette
 /// grise, et pour la première fois un écran couleur.
-class PhotoModel extends IpodModel {
+class PhotoModel extends DeviceModel {
   const PhotoModel();
 
   static const Size _size = FourthGenModel._size;
@@ -372,7 +376,7 @@ class PhotoModel extends IpodModel {
   String get family => 'photo';
 
   @override
-  String get label => 'iPod photo';
+  String get label => 'Photo';
 
   @override
   String get variantName => 'Blanc';
@@ -425,7 +429,7 @@ enum Nano1Color {
 /// Le nano de 1re génération (2005) : très fin (40 × 90 mm), façade en
 /// plastique brillant sous un liseré transparent, dos chromé, petit écran
 /// couleur en haut, molette grise.
-class Nano1Model extends IpodModel {
+class Nano1Model extends DeviceModel {
   const Nano1Model([this.color = Nano1Color.blanc]);
 
   final Nano1Color color;
@@ -470,14 +474,14 @@ class Nano1Model extends IpodModel {
   HoldSwitch? get hold => const HoldSwitch(206);
 
   @override
-  Offset get wheelCenter => const Offset(133.5, 350);
+  Offset get wheelCenter => const Offset(133.5, 380);
 
   @override
   WheelStyle get wheel => switch (color) {
     // Molette gris clair, inscriptions blanches, bouton central blanc.
     Nano1Color.blanc => const WheelStyle(
       radius: 104,
-      buttonRadius: 47,
+      buttonRadius: 38,
       iconScale: 0.7,
       labelSize: 12,
       labelSpacing: 0.8,
@@ -491,7 +495,7 @@ class Nano1Model extends IpodModel {
     // Molette gris anthracite, bouton central noir.
     Nano1Color.noir => const WheelStyle(
       radius: 104,
-      buttonRadius: 47,
+      buttonRadius: 38,
       iconScale: 0.7,
       labelSize: 12,
       labelSpacing: 0.8,
@@ -536,7 +540,7 @@ class Nano1Model extends IpodModel {
 }
 
 /// Plastique noir brillant (U2, nano noir) : presque noir, relevé sur les
-/// photos d'Apple.
+/// photos officielles.
 const _black = [Color(0xFF18191B), Color(0xFF0B0B0D), Color(0xFF050506)];
 
 // --- Boîtier blanc à dos chromé -------------------------------------------------
@@ -660,7 +664,7 @@ class _BacklitButtonPainter extends CustomPainter {
   final WheelZone zone;
   final bool pressed;
 
-  static const _glow = Color(0xFFFF6A1E);
+  static const _glow = Color(0xFFF2492E); // rouge-orangé (photos du rétroéclairage)
 
   @override
   void paint(Canvas canvas, Size size) {

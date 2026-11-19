@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lecteur/core/player.dart';
-import 'package:lecteur/ipod/classic.dart';
-import 'package:lecteur/ipod/ipod.dart';
-import 'package:lecteur/ipod/nav.dart';
-import 'package:lecteur/ipod/vintage.dart';
+import 'package:lecteur/device/classic.dart';
+import 'package:lecteur/device/device.dart';
+import 'package:lecteur/device/nav.dart';
+import 'package:lecteur/device/vintage.dart';
 
 void main() {
   group('découpe de la fenêtre', () {
@@ -94,7 +94,7 @@ void main() {
       }
     }
 
-    testWidgets('l\'iPod part d\'où on l\'a posé et glisse jusqu\'à sa place', (tester) async {
+    testWidgets('l\'baladeur part d\'où on l\'a posé et glisse jusqu\'à sa place', (tester) async {
       tester.view
         ..physicalSize = window
         ..devicePixelRatio = 1;
@@ -103,19 +103,19 @@ void main() {
         MaterialApp(
           home: Material(
             type: MaterialType.transparency,
-            child: IpodStage(player: PlayerController.preview(), initial: const ClassicModel()),
+            child: DeviceStage(player: PlayerController.preview(), initial: const ClassicModel()),
           ),
         ),
       );
       await settle(tester);
-      final home = tester.getRect(find.byType(IpodDevice));
+      final home = tester.getRect(find.byType(DeviceBody));
 
       // Lâché 300 à droite et 120 plus bas que sa place, dans la même fenêtre.
-      final dynamic stage = tester.state(find.byType(IpodStage));
+      final dynamic stage = tester.state(find.byType(DeviceStage));
       stage.debugGlideHome(home.center + const Offset(300, 120), Offset.zero & window);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 16));
-      final start = tester.getRect(find.byType(IpodDevice));
+      final start = tester.getRect(find.byType(DeviceBody));
       expect(start.center.dx, greaterThan(home.center.dx + 250));
       expect(start.center.dy, greaterThan(home.center.dy + 90));
 
@@ -123,12 +123,12 @@ void main() {
       for (var i = 0; i < 8; i++) {
         await tester.pump(const Duration(milliseconds: 16));
       }
-      final midway = tester.getRect(find.byType(IpodDevice));
+      final midway = tester.getRect(find.byType(DeviceBody));
       expect(midway.center.dx, lessThan(start.center.dx));
       expect(midway.center.dx, greaterThan(home.center.dx));
 
       await settle(tester);
-      final end = tester.getRect(find.byType(IpodDevice));
+      final end = tester.getRect(find.byType(DeviceBody));
       expect(end.center.dx, closeTo(home.center.dx, 0.5));
       expect(end.center.dy, closeTo(home.center.dy, 0.5));
     });
@@ -138,41 +138,41 @@ void main() {
         ..physicalSize = window
         ..devicePixelRatio = 1;
       addTearDown(tester.view.reset);
-      IpodStage.debugDragInside = true;
-      ipodFree.value = true;
+      DeviceStage.debugDragInside = true;
+      deviceFree.value = true;
       addTearDown(() {
-        IpodStage.debugDragInside = false;
-        ipodFree.value = false;
+        DeviceStage.debugDragInside = false;
+        deviceFree.value = false;
       });
       await tester.pumpWidget(
         MaterialApp(
           home: Material(
             type: MaterialType.transparency,
-            child: IpodStage(player: PlayerController.preview(), initial: const ClassicModel()),
+            child: DeviceStage(player: PlayerController.preview(), initial: const ClassicModel()),
           ),
         ),
       );
       await settle(tester);
-      final home = tester.getRect(find.byType(IpodDevice));
+      final home = tester.getRect(find.byType(DeviceBody));
 
-      // (Peu de jeu en hauteur : l'iPod prend presque toute la fenêtre.)
+      // (Peu de jeu en hauteur : le baladeur prend presque toute la fenêtre.)
       final gesture = await tester.startGesture(Offset(home.left + 12, home.center.dy));
       await gesture.moveBy(const Offset(-30, 5));
       await gesture.moveBy(const Offset(-220, 10));
       await tester.pump();
-      final held = tester.getRect(find.byType(IpodDevice));
+      final held = tester.getRect(find.byType(DeviceBody));
       await gesture.up();
       await settle(tester);
-      expect(tester.getRect(find.byType(IpodDevice)).center, held.center, reason: 'il reste où on l\'a lâché');
+      expect(tester.getRect(find.byType(DeviceBody)).center, held.center, reason: 'il reste où on l\'a lâché');
 
       // Tiroir sorti : il ne retourne pas au milieu.
       await tester.sendKeyEvent(LogicalKeyboardKey.keyT);
       await settle(tester);
-      final open = tester.getRect(find.byType(IpodDevice));
+      final open = tester.getRect(find.byType(DeviceBody));
       expect(open.center.dx, closeTo(held.center.dx, 1), reason: 'la place ne manque pas à droite : il ne bouge pas');
       await tester.sendKeyEvent(LogicalKeyboardKey.keyT);
       await settle(tester);
-      expect(tester.getRect(find.byType(IpodDevice)).center, held.center, reason: 'tiroir rentré : de retour où on l\'a lâché');
+      expect(tester.getRect(find.byType(DeviceBody)).center, held.center, reason: 'tiroir rentré : de retour où on l\'a lâché');
 
       // Lâché à moitié hors de la fenêtre : ramené en entier dedans.
       final out = await tester.startGesture(held.center - const Offset(60, 0));
@@ -181,23 +181,23 @@ void main() {
       await tester.pump();
       await out.up();
       await settle(tester);
-      final kept = tester.getRect(find.byType(IpodDevice));
+      final kept = tester.getRect(find.byType(DeviceBody));
       expect(kept.right, lessThanOrEqualTo(window.width));
       expect(kept.center.dx, greaterThan(held.center.dx));
 
-      // Là, contre le bord droit, le tiroir n'a pas la place : l'iPod s'écarte juste assez, puis y retourne.
+      // Là, contre le bord droit, le tiroir n'a pas la place : le baladeur s'écarte juste assez, puis y retourne.
       await tester.sendKeyEvent(LogicalKeyboardKey.keyT);
       await settle(tester);
-      final pushed = tester.getRect(find.byType(IpodDevice));
+      final pushed = tester.getRect(find.byType(DeviceBody));
       expect(pushed.center.dx, lessThan(kept.center.dx));
       await tester.sendKeyEvent(LogicalKeyboardKey.keyT);
       await settle(tester);
-      expect(tester.getRect(find.byType(IpodDevice)).center.dx, closeTo(kept.center.dx, 1));
+      expect(tester.getRect(find.byType(DeviceBody)).center.dx, closeTo(kept.center.dx, 1));
 
       // Position fixe : il retourne à sa place.
-      ipodFree.value = false;
+      deviceFree.value = false;
       await settle(tester);
-      final end = tester.getRect(find.byType(IpodDevice));
+      final end = tester.getRect(find.byType(DeviceBody));
       expect(end.center.dx, closeTo(home.center.dx, 0.5));
       expect(end.center.dy, closeTo(home.center.dy, 0.5));
     });
@@ -207,18 +207,18 @@ void main() {
         ..physicalSize = window
         ..devicePixelRatio = 1;
       addTearDown(tester.view.reset);
-      IpodStage.debugDragInside = true;
-      addTearDown(() => IpodStage.debugDragInside = false);
+      DeviceStage.debugDragInside = true;
+      addTearDown(() => DeviceStage.debugDragInside = false);
       await tester.pumpWidget(
         MaterialApp(
           home: Material(
             type: MaterialType.transparency,
-            child: IpodStage(player: PlayerController.preview(), initial: const ClassicModel()),
+            child: DeviceStage(player: PlayerController.preview(), initial: const ClassicModel()),
           ),
         ),
       );
       await settle(tester);
-      final home = tester.getRect(find.byType(IpodDevice));
+      final home = tester.getRect(find.byType(DeviceBody));
 
       // Attrapé par le boîtier, à côté de l'écran.
       final gesture = await tester.startGesture(Offset(home.left + 12, home.center.dy));
@@ -226,15 +226,15 @@ void main() {
       await gesture.moveBy(const Offset(220, 70));
       await tester.pump();
       // Il a suivi, en largeur comme en hauteur, et y reste tant qu'on le tient.
-      final held = tester.getRect(find.byType(IpodDevice));
+      final held = tester.getRect(find.byType(DeviceBody));
       expect(held.center.dx - home.center.dx, greaterThan(200));
       expect(held.center.dy - home.center.dy, greaterThan(60));
       await tester.pump(const Duration(milliseconds: 300));
-      expect(tester.getRect(find.byType(IpodDevice)).center, held.center);
+      expect(tester.getRect(find.byType(DeviceBody)).center, held.center);
 
       await gesture.up();
       await settle(tester);
-      final end = tester.getRect(find.byType(IpodDevice));
+      final end = tester.getRect(find.byType(DeviceBody));
       expect(end.center.dx, closeTo(home.center.dx, 0.5));
       expect(end.center.dy, closeTo(home.center.dy, 0.5));
     });
@@ -244,20 +244,20 @@ void main() {
         ..physicalSize = window
         ..devicePixelRatio = 1;
       addTearDown(tester.view.reset);
-      IpodStage.debugDragInside = true;
-      addTearDown(() => IpodStage.debugDragInside = false);
+      DeviceStage.debugDragInside = true;
+      addTearDown(() => DeviceStage.debugDragInside = false);
       await tester.pumpWidget(
         MaterialApp(
           home: Material(
             type: MaterialType.transparency,
-            child: IpodStage(player: PlayerController.preview(), initial: const FirstGenModel()),
+            child: DeviceStage(player: PlayerController.preview(), initial: const FirstGenModel()),
           ),
         ),
       );
       await settle(tester);
       // 680 de haut dessiné ; dans sa fenêtre de 740 (148 pour le câble, 40
       // de marge), il en fait 552. Pareil ici, malgré toute la place.
-      expect(tester.getRect(find.byType(IpodDevice)).height, closeTo(552, 0.5));
+      expect(tester.getRect(find.byType(DeviceBody)).height, closeTo(552, 0.5));
     });
   });
 }

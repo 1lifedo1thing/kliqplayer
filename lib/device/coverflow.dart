@@ -61,7 +61,7 @@ class CoverFlowView extends StatelessWidget {
               if (!flipping || i != selected) _cover(i, i - pos, s, w / 2, cy),
             // Défilement rapide : l'initiale de l'artiste en grand, sur les pochettes.
             if (page.lists == null && page.letterSpring.value > 0.01)
-              // (Comme sur l'iPod : un carré noir translucide aux coins ronds, un
+              // (Comme sur le baladeur : un carré noir translucide aux coins ronds, un
               // reflet de verre sur sa moitié haute, la lettre blanche en gras.)
               Positioned(
                 left: w / 2 - s * 0.34,

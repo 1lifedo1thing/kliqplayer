@@ -500,7 +500,7 @@ class SpotifyConnectEngine extends PlaybackEngine {
   }
 
   /// Un volume coupé par la prise et jamais rendu (appli fermée pendant un
-  /// changement d'iPod) : on le rend.
+  /// changement de baladeur) : on le rend.
   Future<void> _unmuteLeftover() async {
     final from = int.tryParse(Settings.getString(_mutedKey) ?? '');
     if (from == null) return;

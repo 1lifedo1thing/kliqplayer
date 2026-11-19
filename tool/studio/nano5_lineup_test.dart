@@ -8,7 +8,7 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lecteur/ipod/nanos.dart';
+import 'package:lecteur/device/nanos.dart';
 
 import 'studio.dart';
 

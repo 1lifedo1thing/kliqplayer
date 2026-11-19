@@ -5,8 +5,8 @@ import 'wheel.dart';
 
 /// Un modèle de baladeur : ses dimensions, sa matière et son écran. La
 /// navigation, la molette et les sons sont communs à tous les modèles.
-abstract class IpodModel {
-  const IpodModel();
+abstract class DeviceModel {
+  const DeviceModel();
 
   /// Identifiant stable (préférences).
   String get id;
@@ -45,13 +45,17 @@ abstract class IpodModel {
   /// et 5G) ; null : pas de Couleur au hasard sur ce modèle.
   Color? get coverColor => null;
 
+  /// Toutes les teintes du modèle (Couleur au hasard) : chaque pochette va
+  /// au moins à l'une d'elles.
+  List<Color> get coverPalette => const [];
+
   /// Verrou (Hold) sur la tranche, purement décoratif : on le voit, il ne
   /// fait rien.
   HoldSwitch? get hold => null;
 
   /// Boutons séparés de la molette (3e génération), et leur dessin.
-  List<IpodButton> get buttons => const [];
-  CustomPainter? buttonPainter(IpodButton button, {required bool pressed}) => null;
+  List<DeviceButton> get buttons => const [];
+  CustomPainter? buttonPainter(DeviceButton button, {required bool pressed}) => null;
 
   Offset get wheelCenter;
   WheelStyle get wheel;
@@ -108,8 +112,8 @@ class HoldSwitch {
 
 /// Bouton rond posé sur la façade, à côté de la molette.
 @immutable
-class IpodButton {
-  const IpodButton(this.zone, this.center, this.radius);
+class DeviceButton {
+  const DeviceButton(this.zone, this.center, this.radius);
 
   final WheelZone zone;
   final Offset center;

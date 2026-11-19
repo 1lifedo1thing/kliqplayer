@@ -1,4 +1,4 @@
-part of 'ipod.dart';
+part of 'device.dart';
 
 /// Peintre qui recalcule la prise au moment de peindre, une fois toute la
 /// mise en page (et les transformations de l'appareil) connue.
@@ -114,7 +114,7 @@ class _HandlePainter extends CustomPainter {
   final int side;
 
   /// Une flèche gravée vers l'extérieur au lieu de l'encoche (bouton qui
-  /// déplace l'iPod).
+  /// déplace le baladeur).
   final bool arrow;
 
   @override

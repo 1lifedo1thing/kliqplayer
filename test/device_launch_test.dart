@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lecteur/core/player.dart';
 import 'package:lecteur/core/settings.dart';
-import 'package:lecteur/ipod/classic.dart';
-import 'package:lecteur/ipod/ipod.dart';
-import 'package:lecteur/ipod/jack.dart';
-import 'package:lecteur/ipod/screen.dart';
+import 'package:lecteur/device/classic.dart';
+import 'package:lecteur/device/device.dart';
+import 'package:lecteur/device/jack.dart';
+import 'package:lecteur/device/screen.dart';
 
 /// La prise telle qu'elle est peinte en ce moment (null si rien).
 JackPainter? _jack(WidgetTester tester) {
@@ -20,7 +20,7 @@ JackPainter? _jack(WidgetTester tester) {
 }
 
 void main() {
-  // Au lancement, l'iPod monte débranché ; une fois arrivé, la prise
+  // Au lancement, le baladeur monte débranché ; une fois arrivé, la prise
   // descend se brancher. La scène peut s'animer pendant la montée (souris
   // sur la fenêtre : les poignées sortent) : la prise doit quand même
   // attendre l'arrivée pour descendre, au lieu d'apparaître déjà branchée.
@@ -29,16 +29,16 @@ void main() {
       ..physicalSize = const Size(440, 740)
       ..devicePixelRatio = 1;
     addTearDown(tester.view.reset);
-    Settings.setString('ipod.model', const ClassicModel().id);
+    Settings.setString('device.model', const ClassicModel().id);
     screenPower.value = false;
-    ipodLanded.value = false;
-    addTearDown(() => ipodLanded.value = true);
+    deviceLanded.value = false;
+    addTearDown(() => deviceLanded.value = true);
     await tester.pumpWidget(MaterialApp(
-      home: Material(type: MaterialType.transparency, child: IpodStage(player: PlayerController.preview())),
+      home: Material(type: MaterialType.transparency, child: DeviceStage(player: PlayerController.preview())),
     ));
     await tester.pump(const Duration(milliseconds: 16));
     // Pendant la montée, la souris passe près d'un coin du haut.
-    final device = tester.getRect(find.byType(IpodDevice));
+    final device = tester.getRect(find.byType(DeviceBody));
     final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
     addTearDown(mouse.removePointer);
     await mouse.addPointer(location: Offset.zero);
@@ -48,7 +48,7 @@ void main() {
     }
     expect(_jack(tester), isNull, reason: 'pas de prise pendant la montée');
 
-    ipodLanded.value = true;
+    deviceLanded.value = true;
     await tester.pump(const Duration(milliseconds: 16));
     final first = _jack(tester);
     expect(first, isNotNull);

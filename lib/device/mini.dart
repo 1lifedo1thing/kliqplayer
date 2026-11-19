@@ -11,7 +11,7 @@ import 'wheel.dart';
 import '../core/strings.dart';
 
 /// Teintes d'aluminium anodisé de la 1re génération, relevées sur les
-/// photos d'Apple : la face ([base]), le reflet qui court le long des
+/// photos officielles : la face ([base]), le reflet qui court le long des
 /// arrondis ([light]) et l'ombre des flancs ([dark]).
 enum MiniColor {
   argent('Argent', base: Color(0xFFC4C6C9), light: Color(0xFFD9DBDE), dark: Color(0xFF5A5D62)),
@@ -45,7 +45,7 @@ enum MiniColor {
 /// Le Mini : tube d'aluminium anodisé de 51 × 91 mm, petit écran
 /// monochrome rétroéclairé, molette en plastique blanc cassé aux inscriptions
 /// grises.
-class MiniModel extends IpodModel {
+class MiniModel extends DeviceModel {
   const MiniModel([this.color = MiniColor.bleu]);
 
   final MiniColor color;
@@ -93,7 +93,7 @@ class MiniModel extends IpodModel {
   @override
   WheelStyle get wheel => WheelStyle(
         radius: 132,
-        buttonRadius: 45,
+        buttonRadius: 42,
         iconScale: 1,
         labelSize: 17,
         labelSpacing: 0.9,
@@ -188,7 +188,7 @@ class _MiniBodyPainter extends CustomPainter {
     canvas.restore();
 
     // Fenêtre de l'écran : découpe biseautée dans l'aluminium, puis cadre noir.
-    final window = RRect.fromRectAndRadius(MiniModel._screen.inflate(12), const Radius.circular(7));
+    final window = RRect.fromRectAndRadius(MiniModel._screen.inflate(5), const Radius.circular(4));
     canvas.drawRRect(
       window.inflate(1.5),
       Paint()
@@ -200,7 +200,7 @@ class _MiniBodyPainter extends CustomPainter {
     );
     canvas.drawRRect(window, Paint()..color = const Color(0xFF2A2D30));
     canvas.drawRRect(
-      RRect.fromRectAndRadius(MiniModel._screen.inflate(4), const Radius.circular(3)),
+      RRect.fromRectAndRadius(MiniModel._screen.inflate(2), const Radius.circular(2)),
       Paint()..color = const Color(0xFF15171A),
     );
   }
@@ -215,7 +215,7 @@ class _MiniGlassPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final window = RRect.fromRectAndRadius(MiniModel._screen.inflate(12), const Radius.circular(7));
+    final window = RRect.fromRectAndRadius(MiniModel._screen.inflate(5), const Radius.circular(4));
     canvas.save();
     canvas.clipRRect(window);
     final r = window.outerRect;
@@ -251,7 +251,7 @@ class _MiniGlassPainter extends CustomPainter {
 
 // --- Écran monochrome ------------------------------------------------------------
 
-// Relevés sur l'écran rétroéclairé des photos d'Apple : fond bleuté, encre
+// Relevés sur l'écran rétroéclairé des photos officielles : fond bleuté, encre
 // bleu nuit.
 const _ink = Color(0xFF2B2C55);
 const _lcd = Color(0xFFB5C1D5);
@@ -460,7 +460,7 @@ class _NowPlaying extends StatelessWidget {
     final track = player.current;
     if (track == null) return Center(child: Text(tr('Aucun morceau')));
     // Rang dans ce qui a été lancé (l'album, la liste…), comme sur un vrai
-    // iPod ; rien si le morceau a été lancé ailleurs (appli Spotify).
+    // baladeur ; rien si le morceau a été lancé ailleurs (appli Spotify).
     final position = player.queueIndex >= 0 ? trOf(player.queueIndex + 1, player.nowPlaying.length) : '';
 
     Widget line(String text, TextStyle style) => Center(child: Marquee(text, style: style));

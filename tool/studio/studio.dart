@@ -11,8 +11,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lecteur/core/library.dart';
 import 'package:lecteur/core/player.dart';
 import 'package:lecteur/core/strings.dart';
-import 'package:lecteur/ipod/ipod.dart';
-import 'package:lecteur/ipod/model.dart';
+import 'package:lecteur/device/device.dart';
+import 'package:lecteur/device/model.dart';
 
 /// Résolution des images (× la taille à l'écran dans l'appli).
 const studioScale = 4.0;
@@ -80,7 +80,7 @@ final _boundary = GlobalKey();
 
 /// Le baladeur seul sur fond transparent, dans une fenêtre de [size]
 /// (par défaut celle du modèle).
-Future<void> showStage(WidgetTester tester, PlayerController player, IpodModel model, {Size? size}) async {
+Future<void> showStage(WidgetTester tester, PlayerController player, DeviceModel model, {Size? size}) async {
   tester.view
     ..physicalSize = size ?? model.windowSize
     ..devicePixelRatio = 1;
@@ -90,7 +90,7 @@ Future<void> showStage(WidgetTester tester, PlayerController player, IpodModel m
     color: Colors.transparent,
     home: RepaintBoundary(
       key: _boundary,
-      child: Material(type: MaterialType.transparency, child: IpodStage(player: player, initial: model)),
+      child: Material(type: MaterialType.transparency, child: DeviceStage(player: player, initial: model)),
     ),
   ));
   await frames(tester, 90);

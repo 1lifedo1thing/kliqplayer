@@ -47,7 +47,7 @@ WheelStyle _pad(double radius, double button, {Anodized? tint, bool darkRing = f
 /// Le shuffle de 1re génération (2005) : une barrette de plastique blanc
 /// (25 × 84 mm), l'anneau de commandes en haut, le connecteur USB sous un
 /// capuchon en bas. Pas d'écran.
-class Shuffle1Model extends IpodModel {
+class Shuffle1Model extends DeviceModel {
   const Shuffle1Model();
 
   static const Size _size = Size(167, 560);
@@ -119,9 +119,9 @@ const shuffle2Colors = [
 
 /// Le shuffle de 2e génération (2006) : une pince en aluminium anodisé
 /// (41 × 27 mm), l'anneau de commandes décalé vers la droite (mesuré sur la
-/// photo d'Apple : centre à +12 % de la largeur, 57 % de la largeur de
+/// photo officielle : centre à +12 % de la largeur, 57 % de la largeur de
 /// diamètre) ; prise casque et voyant en haut, interrupteurs en bas.
-class Shuffle2Model extends IpodModel {
+class Shuffle2Model extends DeviceModel {
   const Shuffle2Model(this.color);
 
   final Anodized color;
@@ -209,7 +209,7 @@ const shuffle4Colors = [
 /// Le shuffle de 4e génération (2010) : une petite pince carrée (29 × 31,6
 /// mm), l'anneau de commandes presque bord à bord ; sur la tranche du haut,
 /// l'interrupteur, le bouton VoiceOver, le voyant et la prise casque.
-class Shuffle4Model extends IpodModel {
+class Shuffle4Model extends DeviceModel {
   const Shuffle4Model(this.color);
 
   final Anodized color;

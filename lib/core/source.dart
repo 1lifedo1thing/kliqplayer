@@ -43,7 +43,7 @@ class EmptySource extends MusicSource {
   PlaybackEngine createEngine() => SilentEngine();
 }
 
-/// Le compte d'une source en ligne (Spotify, plus tard Apple Music) : se
+/// Le compte d'une source en ligne (Spotify, plus tard d'autres services) : se
 /// connecter. Existe même quand la source en service est le dossier : c'est
 /// par lui qu'on y passe. Le son sort toujours de ce PC : c'est la source
 /// qui s'en occupe, il n'y a pas d'appareil à choisir.

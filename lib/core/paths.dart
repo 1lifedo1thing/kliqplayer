@@ -61,10 +61,7 @@ Directory defaultMusicDirectory() {
   if (override != null && override.isNotEmpty) return Directory(override);
   final chosen = Settings.getString('library.folder');
   if (chosen != null && chosen.isNotEmpty) return Directory(chosen);
-  // Sinon « Musique Ipod » s'il existe, ou le dossier Musique tout entier.
-  final music = joinPath(home, 'Music');
-  final ipod = Directory(joinPath(music, 'Musique Ipod'));
-  return ipod.existsSync() ? ipod : Directory(music);
+  return Directory(joinPath(home, 'Music'));
 }
 
 /// Dossier où garder ce qui peut se retélécharger (pochettes en ligne).

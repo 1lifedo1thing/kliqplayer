@@ -1,0 +1,17 @@
+{
+  "go": "/tmp/kliqplayer-demo-go",
+  "start": "nano4-bleu",
+  "steps": [
+    {"coverflow": 5000},
+    {"colorShuffle": true},
+    {"wait": 2500},
+    {"tint": "nano4-vert"},   {"next": true}, {"wait": 1500},
+    {"tint": "nano4-jaune"},  {"next": true}, {"wait": 1500},
+    {"tint": "nano4-orange"}, {"next": true}, {"wait": 1500},
+    {"tint": "nano4-rose"},   {"next": true}, {"wait": 1500},
+    {"tint": "nano4-violet"}, {"next": true}, {"wait": 1500},
+    {"tint": "nano5-argent"}, {"wait": 1500},
+    {"tint": "classic"},      {"wait": 1500},
+    {"tint": "gen1"},         {"wait": 3000}
+  ]
+}

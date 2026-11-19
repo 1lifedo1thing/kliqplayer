@@ -28,6 +28,18 @@ int coverMatchCount(List<double> shares) {
   return kept >= coverMatchMin ? kept : shares.take(coverMatchMin).where((s) => s >= coverMatchFloor).length;
 }
 
+/// Les albums que retient la teinte n° [color], du plus assorti au moins
+/// assorti. [shares] : pour chaque album, sa part de chaque teinte du
+/// modèle. Elle prend ceux qui passent son seuil, plus ceux dont elle est
+/// la teinte la plus présente (à égalité, la première) : ainsi chaque
+/// pochette sort dans au moins une couleur.
+List<int> coverPick(List<List<double>> shares, int color) {
+  final order = [for (var i = 0; i < shares.length; i++) i]..sort((a, b) => shares[b][color].compareTo(shares[a][color]));
+  final kept = order.take(coverMatchCount([for (final i in order) shares[i][color]])).toSet();
+  int best(List<double> s) => s.indexOf(s.reduce(math.max));
+  return [for (final i in order) if (kept.contains(i) || best(shares[i]) == color) i];
+}
+
 /// La pochette [bytes] réduite à 16 × 16 pixels (RGBA) : assez pour juger de
 /// ses couleurs, et presque rien à garder en mémoire.
 Future<Uint8List?> shrinkCover(Uint8List bytes) async {

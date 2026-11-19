@@ -1,4 +1,4 @@
-part of 'ipod.dart';
+part of 'device.dart';
 
 /// Zone de travail (l'écran sans la barre des tâches) de l'écran où se
 /// trouve [window], parmi [screens] (chacun : ses limites et sa zone de
@@ -15,7 +15,7 @@ Rect? workAreaFor(Rect window, List<({Rect bounds, Rect work})> screens) {
 }
 
 /// Étend [window] à toute la zone de travail de son écran (Windows) : la
-/// fenêtre, transparente et sans bord, est la scène où l'iPod se déplace.
+/// fenêtre, transparente et sans bord, est la scène où le baladeur se déplace.
 Rect? fillWorkArea(Window window) {
   try {
     final now = window.contentBounds.toRect();
@@ -34,7 +34,7 @@ Rect? fillWorkArea(Window window) {
 
 /// La fenêtre [wanted], réduite (mêmes proportions) pour tenir dans la zone
 /// de travail [work] avec [margin] de jeu (barre de titre, placement) : sur
-/// un petit écran (1366 × 768, 1280 × 800), l'iPod entier, pas coupé en bas.
+/// un petit écran (1366 × 768, 1280 × 800), le baladeur entier, pas coupé en bas.
 Size fitWindowSize(Size wanted, Rect? work, {double margin = 48}) {
   if (work == null || work.isEmpty) return wanted;
   final k = math.min((work.width - margin) / wanted.width, (work.height - margin) / wanted.height);
@@ -62,7 +62,7 @@ enum WindowFit {
   fills,
 
   /// Windows l'a rangée dans une zone (Win+flèche, zones d'ancrage) : elle y
-  /// reste, l'iPod vit dedans.
+  /// reste, le baladeur vit dedans.
   docked,
 
   /// Ailleurs sans avoir été rangée (autre écran, sortie de sa zone, écran
@@ -139,9 +139,9 @@ List<Offset> outlineOf(List<Rect> zones) {
 /// La fenêtre que l'appli règle elle-même : autour de l'appareil (macOS),
 /// ou en plein écran transparent découpé autour de lui (Windows). À part de
 /// la scène : ce qu'elle a besoin d'en savoir tient en quelques lignes.
-mixin _ManagedWindow on State<IpodStage> {
-  IpodModel get _model;
-  IpodModel? get _incoming;
+mixin _ManagedWindow on State<DeviceStage> {
+  DeviceModel get _model;
+  DeviceModel? get _incoming;
   int get _side;
   _Geo? get _geoShown;
   bool get _remember;
@@ -212,7 +212,7 @@ mixin _ManagedWindow on State<IpodStage> {
   double _managedDrawerW(double deviceW) => (deviceW * 1.3).clamp(230.0, 460.0);
 
   /// Ce que la fenêtre ajoute à côté de l'appareil pour le tiroir ouvert.
-  double _drawerRoom(double deviceW) => _managedDrawerW(deviceW) - _IpodStageState._tuck + 18;
+  double _drawerRoom(double deviceW) => _managedDrawerW(deviceW) - _DeviceStageState._tuck + 18;
 
   /// L'écran où est l'appareil.
   Rect _screenOf(Rect r) {
@@ -229,7 +229,7 @@ mixin _ManagedWindow on State<IpodStage> {
 
   /// Limites voulues pour la fenêtre, l'appareil [model] étant en [device]
   /// à l'écran.
-  Rect _frameFor(IpodModel model, Rect device) => windowFrameFor(
+  Rect _frameFor(DeviceModel model, Rect device) => windowFrameFor(
         model,
         device,
         _screenOf(device),
@@ -320,7 +320,7 @@ mixin _ManagedWindow on State<IpodStage> {
   // --- Plein écran transparent (Windows) ------------------------------------
   //
   // Sous Windows, pas de gestionnaire qui range les fenêtres : la fenêtre
-  // couvre toute la zone de travail, transparente, et l'iPod s'y tient à
+  // couvre toute la zone de travail, transparente, et le baladeur s'y tient à
   // gauche, au milieu ou à droite, comme dans une grande fenêtre sous Linux.
   // Pour qu'elle ne confisque pas les clics du bureau, elle est découpée
   // autour de l'appareil et de son câble tant que rien ne bouge ; tiroir
@@ -329,18 +329,18 @@ mixin _ManagedWindow on State<IpodStage> {
 
   late final Window? _full = _remember && Platform.isWindows ? _currentWindow() : null;
 
-  // On tient l'iPod pour le déplacer dans la fenêtre, qui ne bouge pas.
+  // On tient le baladeur pour le déplacer dans la fenêtre, qui ne bouge pas.
   // Lâché :
   // - dans la fenêtre, il glisse jusqu'à la place qu'il avait ;
   // - hors de la zone où Windows l'avait rangé, la fenêtre redevient le
   //   plein écran et il en rejoint le milieu.
   // Amené tout en haut de l'écran, il passe aux mains de Windows, qui
   // propose ses zones d'ancrage : déposé dans l'une, la fenêtre la garde et
-  // l'iPod y vit comme dans une tuile sous Linux.
+  // le baladeur y vit comme dans une tuile sous Linux.
   // (On le change de côté avec les boutons sous les poignées.)
 
-  /// L'iPod se déplace dans la fenêtre quand on le tient.
-  bool get _dragsInside => _full != null || IpodStage.debugDragInside;
+  /// Le baladeur se déplace dans la fenêtre quand on le tient.
+  bool get _dragsInside => _full != null || DeviceStage.debugDragInside;
 
   /// Le coin de la fenêtre, à l'écran.
   Offset get _origin {
@@ -372,7 +372,7 @@ mixin _ManagedWindow on State<IpodStage> {
     }
   }
 
-  /// L'iPod, tenu, arrive en haut de l'écran : Windows prend la fenêtre en
+  /// Le baladeur, tenu, arrive en haut de l'écran : Windows prend la fenêtre en
   /// main (elle n'est plus rangée nulle part) et propose ses zones.
   void _handToSystem() {
     _carried = true;
@@ -386,7 +386,7 @@ mixin _ManagedWindow on State<IpodStage> {
     _refit = Timer(const Duration(milliseconds: 300), _windowSettled);
   }
 
-  /// On lâche l'iPod, son centre en [center] et le pointeur en [pointer] (à
+  /// On lâche le baladeur, son centre en [center] et le pointeur en [pointer] (à
   /// l'écran) ; [dock] : la zone où il était rangé quand on l'a attrapé.
   void _dropHeld(Offset center, Offset pointer, Rect? dock) {
     final win = _full;
@@ -414,10 +414,10 @@ mixin _ManagedWindow on State<IpodStage> {
   }
 
   /// La fenêtre a quitté sa zone pour tout l'écran, le temps qu'on tienne
-  /// l'iPod.
+  /// le baladeur.
   bool _grown = false;
 
-  /// Tenu, l'iPod (en [device], à l'écran) arrive au bord de la zone [dock]
+  /// Tenu, le baladeur (en [device], à l'écran) arrive au bord de la zone [dock]
   /// où la fenêtre est rangée : elle prend tout l'écran, pour qu'il reste
   /// visible en en sortant.
   void _growIfLeaving(Rect device, Rect dock) {
@@ -465,7 +465,7 @@ mixin _ManagedWindow on State<IpodStage> {
     if (mounted) setState(() {});
   }
 
-  /// Windows a la fenêtre en main (l'iPod a été amené en haut de l'écran).
+  /// Windows a la fenêtre en main (le baladeur a été amené en haut de l'écran).
   bool _carried = false;
 
   /// Taille donnée en dernier à la fenêtre pour couvrir un écran.
@@ -515,7 +515,7 @@ mixin _ManagedWindow on State<IpodStage> {
       return;
     }
     // Lâchée par Windows, qui l'avait en main (et pas déplacée au clavier) :
-    // l'iPod rejoindra sa place en glissant.
+    // le baladeur rejoindra sa place en glissant.
     final dropped = _carried;
     _carried = false;
     void home() {
@@ -528,12 +528,12 @@ mixin _ManagedWindow on State<IpodStage> {
       if (area == null || area.isEmpty) return;
       final maximized = win.isMaximized;
       final fit = maximized ? WindowFit.refit : windowFit(now, area, _lastFill);
-      // Là où on voit l'iPod (emporté par Windows, il est resté sous le
+      // Là où on voit le baladeur (emporté par Windows, il est resté sous le
       // pointeur).
       final device = _deviceShown;
       final center = dropped && device != null ? now.topLeft + device.center : null;
       if (fit == WindowFit.docked) {
-        // Rangée dans une zone : l'iPod est à sa place dedans.
+        // Rangée dans une zone : le baladeur est à sa place dedans.
         _dock = now;
         home();
         return;
@@ -544,7 +544,7 @@ mixin _ManagedWindow on State<IpodStage> {
         return;
       }
       if (maximized) win.unmaximize();
-      // Sortie de sa zone (au clavier) : l'iPod au milieu. Puis le plein
+      // Sortie de sa zone (au clavier) : le baladeur au milieu. Puis le plein
       // écran, où il rejoint sa place.
       if (_dock != null) _recenter();
       _dock = null;
@@ -603,7 +603,7 @@ mixin _ManagedWindow on State<IpodStage> {
       return;
     }
     // La découpe est appliquée tout de suite, l'image qui va avec n'arrive
-    // qu'un instant plus tard. Quand l'iPod bouge, elle couvre donc aussi
+    // qu'un instant plus tard. Quand le baladeur bouge, elle couvre donc aussi
     // ses dernières positions (l'image encore à l'écran n'est pas rognée)
     // et celle où il sera à l'image suivante.
     final spots = <Rect>[dev];
@@ -627,7 +627,7 @@ mixin _ManagedWindow on State<IpodStage> {
     );
   }
 
-  /// Dernières positions de l'iPod pendant qu'il bouge.
+  /// Dernières positions du baladeur pendant qu'il bouge.
   final _trail = <Rect>[];
 
   /// La colonne du câble, de l'appareil (en [dev]) au bord de la fenêtre.

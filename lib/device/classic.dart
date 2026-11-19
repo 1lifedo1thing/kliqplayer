@@ -13,7 +13,7 @@ import 'nav.dart';
 import 'wheel.dart';
 import '../core/strings.dart';
 
-/// Teintes des grands iPod à écran couleur. La 5e génération est en
+/// Teintes des grands baladeur à écran couleur. La 5e génération est en
 /// plastique brillant, [blanc] ou [noir] ; le Classic en aluminium anodisé,
 /// [argent] ou [noir] (un gris anthracite).
 enum ClassicColor {
@@ -33,7 +33,7 @@ enum ClassicColor {
 
 /// Le Classic (2007) : façade en aluminium anodisé, liseré chromé, écran
 /// couleur 320×240.
-class ClassicModel extends IpodModel {
+class ClassicModel extends DeviceModel {
   const ClassicModel([this.color = ClassicColor.argent]);
 
   final ClassicColor color;
@@ -128,7 +128,7 @@ class ClassicModel extends IpodModel {
 /// La 5e génération « vidéo » (2005) : le format du Classic, mais une façade
 /// en plastique brillant, un écran plus large au cadre noir et une molette
 /// plus petite, grise.
-class VideoModel extends IpodModel {
+class VideoModel extends DeviceModel {
   const VideoModel([this.color = ClassicColor.blanc]);
 
   final ClassicColor color;
@@ -439,10 +439,15 @@ class GlassPainter extends CustomPainter {
 // --- Écran -------------------------------------------------------------------
 
 const double _barH = 22;
+
+/// Hauteur de la bande de pochettes du nano 5G (un cinquième de l'écran,
+/// d'après photo).
+const double _stripH = 80;
+const double _stripFade = 6;
 const _ink = Color(0xFF111111);
 const _font = 'Noto Sans';
 
-/// Les deux interfaces des écrans couleur : celle de 2004-2006 (iPod
+/// Les deux interfaces des écrans couleur : celle de 2004-2006 (baladeur
 /// photo, 5e génération, nano 1G et 2G), et celle de 2007 (Classic, nano
 /// 3G et 4G) avec ses menus scindés, Cover Flow et les albums en vignettes.
 enum ColorUi { video, classic }
@@ -471,6 +476,7 @@ class ClassicLook extends ScreenLook {
   @override
   int rowsFor(MenuKind kind) => switch (kind) {
         MenuKind.tall when _modern => portrait ? (tall ? 8 : 7) : 5,
+        MenuKind.split when tall => ((size.height - _stripH - _barH) / rowHeight).floor(),
         _ => visibleRows,
       };
 
@@ -480,6 +486,13 @@ class ClassicLook extends ScreenLook {
 
   @override
   ({Rect menu, Rect image})? split(Size screen) {
+    // Nano 5G : le menu en haut, une bande de pochettes en bas.
+    if (tall) {
+      final top = screen.height - _stripH;
+      // La bande déborde vers le haut de [_stripFade] : le blanc du menu y
+      // fond au noir.
+      return (menu: Rect.fromLTRB(0, _barH, screen.width, top), image: Rect.fromLTRB(0, top - _stripFade, screen.width, screen.height));
+    }
     // (Pas sur l'écran vertical du nano 4G : menu pleine largeur.)
     if (!_modern || portrait) return null;
     // L'image prend toute la hauteur : la barre de titre s'arrête à elle.
@@ -492,7 +505,7 @@ class ClassicLook extends ScreenLook {
 
   @override
   Widget preview(MenuEntry entry, PlayerController player, {required bool active}) =>
-      _Preview(kind: entry.preview, seed: entry.label, player: player, active: active);
+      tall ? _AlbumStrip(player: player, active: active) : _Preview(kind: entry.preview, seed: entry.label, player: player, active: active);
 
   @override
   List<NowPlayingMode> get centerCycle => _modern
@@ -502,18 +515,20 @@ class ClassicLook extends ScreenLook {
   @override
   Size get size => portrait ? Size(240, tall ? 376 : 320) : landscape;
 
+  /// Lignes plus hautes et texte plus gros sur l'écran allongé du nano 5G
+  /// (photo : 11 lignes environ).
   @override
-  double get rowHeight => 24;
+  double get rowHeight => tall ? 32 : 24;
 
   @override
-  int get visibleRows => portrait ? (tall ? 14 : 12) : ((landscape.height - _barH) / rowHeight).floor();
+  int get visibleRows => portrait ? (tall ? 11 : 12) : ((landscape.height - _barH) / rowHeight).floor();
 
   @override
   double get scrollbarWidth => 9;
 
   @override
   TextStyle get textStyle =>
-      const TextStyle(fontFamily: _font, color: _ink, fontSize: 14, fontWeight: FontWeight.w600, height: 1);
+      TextStyle(fontFamily: _font, color: _ink, fontSize: tall ? 17 : 14, fontWeight: FontWeight.w600, height: 1);
 
   @override
   Color get background => Colors.white;
@@ -849,13 +864,22 @@ class _NowPlaying extends StatelessWidget {
       );
     }
     // Rang dans ce qui a été lancé (l'album, la liste…), comme sur un vrai
-    // iPod ; rien si le morceau a été lancé ailleurs (appli Spotify).
+    // baladeur ; rien si le morceau a été lancé ailleurs (appli Spotify).
     final position = player.queueIndex >= 0 ? trOf(player.queueIndex + 1, player.nowPlaying.length) : '';
 
     // Sur les petits écrans (nano 1G et 2G), la pochette rapetisse et le
     // texte remonte pour rester au-dessus de la barre de progression.
     final art = math.min(modern ? 108.0 : 116.0, height - 74);
-    final textTop = math.min(40.0, height - 122);
+    // Sans pochette, l'interface 2004-2006 centre le texte sur toute la
+    // largeur (photos du 5G), sans vignette vide.
+    final bare = !modern && player.cover == null;
+    final small = height < 160;
+    final gaps = small ? 4.0 : 18.0;
+    final double textTop = bare ? 20 + math.max(0.0, (height - 66 - 55 - gaps) / 2) : math.min(40.0, height - 122);
+    // Centré : trois lignes de même taille et même graisse, comme sur le 5G.
+    const bareStyle = TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF33363B));
+    Widget line(String text, TextStyle style) =>
+        bare ? Center(child: Marquee(text, style: small ? style : bareStyle)) : Marquee(text, style: style);
     return Stack(
       children: [
         Positioned(
@@ -867,20 +891,20 @@ class _NowPlaying extends StatelessWidget {
         Positioned(right: 8, top: 4, child: _PlayIcons(player: player, color: const Color(0xFF2E6FCB), size: 13)),
         if (modern)
           Positioned(left: 12, top: 22, child: _TiltedArtwork(bytes: player.cover, size: art))
-        else
+        else if (!bare)
           Positioned(left: 10, top: 24, child: _Artwork(bytes: player.cover, size: art)),
         Positioned(
-          left: 10 + art + 12,
+          left: bare ? 8 : 10 + art + 12,
           right: 8,
           top: textTop,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: bare ? CrossAxisAlignment.center : CrossAxisAlignment.start,
             children: [
-              Marquee(track.title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 10),
-              Marquee(track.artist, style: const TextStyle(fontSize: 13)),
-              const SizedBox(height: 8),
-              Marquee(track.album, style: const TextStyle(fontSize: 13, color: Color(0xFF5A5F66))),
+              line(track.title, const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+              SizedBox(height: small ? 2 : 10),
+              line(track.artist, const TextStyle(fontSize: 13)),
+              SizedBox(height: small ? 2 : 8),
+              line(track.album, const TextStyle(fontSize: 13, color: Color(0xFF5A5F66))),
             ],
           ),
         ),
@@ -1216,6 +1240,119 @@ class _PreviewState extends State<_Preview> {
         ],
       ),
     );
+  }
+}
+
+/// Bande de pochettes sous le menu du nano 5G : les albums défilent
+/// lentement de droite à gauche, côte à côte.
+class _AlbumStrip extends StatefulWidget {
+  const _AlbumStrip({required this.player, required this.active});
+
+  final PlayerController player;
+
+  /// Écran allumé : la bande défile.
+  final bool active;
+
+  @override
+  State<_AlbumStrip> createState() => _AlbumStripState();
+}
+
+class _AlbumStripState extends State<_AlbumStrip> {
+  static const _speed = 12.0; // pixels par seconde
+  static const _gap = 2.0;
+
+  final DateTime _start = clock.now();
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _sync();
+  }
+
+  @override
+  void didUpdateWidget(_AlbumStrip old) {
+    super.didUpdateWidget(old);
+    _sync();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _sync() {
+    if (widget.active == (_timer != null)) return;
+    _timer?.cancel();
+    _timer = widget.active
+        ? Timer.periodic(const Duration(milliseconds: 50), (_) {
+            if (mounted) setState(() {});
+          })
+        : null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final player = widget.player;
+    final count = player.albums.length;
+    return LayoutBuilder(builder: (context, box) {
+      final side = box.maxHeight - _stripFade;
+      final step = side + _gap;
+      final shift = clock.now().difference(_start).inMilliseconds / 1000 * _speed;
+      final first = shift ~/ step;
+      return ClipRect(
+        child: Column(
+          children: [
+            // Le blanc du menu fond au noir, juste au-dessus des pochettes.
+            const SizedBox(
+              height: _stripFade,
+              width: double.infinity,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0x000E0F12), Color(0xFF0E0F12)],
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              child: ColoredBox(
+                color: const Color(0xFF0E0F12),
+                child: Stack(
+                  children: [
+                    for (var k = 0; k * step < box.maxWidth + step; k++)
+                      Positioned(
+                        left: (first + k) * step - shift,
+                        top: 0,
+                        child: _Artwork(bytes: count == 0 ? null : player.albumCover((first + k) % count), size: side),
+                      ),
+                    // Et une ombre sur le haut des pochettes : elles passent sous le menu.
+                    const Positioned(
+                      left: 0,
+                      right: 0,
+                      top: 0,
+                      height: 12,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Color(0x99000000), Color(0x00000000)],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    });
   }
 }
 

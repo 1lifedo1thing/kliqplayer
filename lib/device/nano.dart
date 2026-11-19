@@ -28,7 +28,7 @@ enum NanoColor {
 
 /// Le Nano de 3e génération, le « gros » : presque carré (52 × 70 mm),
 /// écran couleur 320×240, prise casque sous l'appareil.
-class NanoModel extends IpodModel {
+class NanoModel extends DeviceModel {
   const NanoModel([this.color = NanoColor.argent]);
 
   final NanoColor color;
@@ -70,28 +70,29 @@ class NanoModel extends IpodModel {
   bool get jackOnTop => false;
 
   @override
-  Offset get wheelCenter => const Offset(174.5, 354);
+  Offset get wheelCenter => const Offset(174.5, 346);
 
   @override
   WheelStyle get wheel => color == NanoColor.noir
       ? const WheelStyle(
-          radius: 86,
-          buttonRadius: 42,
+          radius: 93,
+          buttonRadius: 43,
           iconScale: 0.65,
           labelSize: 11,
           labelSpacing: 0.8,
           label: Color(0xFFE1E2E4),
           recess: Color(0xFF0B0C0E),
-          ring: [Color(0xFF292B31), Color(0xFF25272D), Color(0xFF1E2025)],
+          ring: [Color(0xFF1D1E21), Color(0xFF191A1D), Color(0xFF141518)],
           edgeLight: 0.1,
           groove: Color(0xFF0E0F12),
-          buttonUp: [Color(0xFF212328), Color(0xFF2E3037)],
-          buttonDown: [Color(0xFF17181C), Color(0xFF24262B)],
+          // Bouton en aluminium anodisé, comme le boîtier : plus clair que la molette.
+          buttonUp: [Color(0xFF4E5055), Color(0xFF3F4146)],
+          buttonDown: [Color(0xFF37393D), Color(0xFF424448)],
           buttonEdge: 0.1,
         )
       : WheelStyle(
-          radius: 86,
-          buttonRadius: 42,
+          radius: 93,
+          buttonRadius: 43,
           iconScale: 0.65,
           labelSize: 11,
           labelSpacing: 0.8,
@@ -140,63 +141,77 @@ class _NanoBodyPainter extends CustomPainter {
 
     paintFloatShadow(canvas, outer);
 
-    // Dos en acier poli qui déborde en fin liseré.
-    canvas.drawRRect(
-      outer,
+    // Aluminium anodisé jusqu'au bord : face unie sur toute la largeur de
+    // l'écran ; au-delà, les flancs arrondis s'assombrissent à peine
+    // jusqu'au bord (photos). Arrondi aussi en haut et en bas.
+    final c = color;
+    final all = Offset.zero & size;
+    Color mix(Color a, Color b, double t) => Color.lerp(a, b, t)!;
+    final l = NanoModel._screen.left / size.width, r = NanoModel._screen.right / size.width;
+    double y(double px) => px / size.height;
+    canvas.save();
+    canvas.clipRRect(outer);
+    canvas.drawRect(
+      all,
       Paint()
         ..shader = ui.Gradient.linear(
           Offset.zero,
           Offset(size.width, 0),
-          const [Color(0xFF8C9095), Color(0xFFF7F8F9), Color(0xFFB4B8BC), Color(0xFFE8EAEC), Color(0xFF85898E)],
-          const [0, 0.18, 0.5, 0.82, 1],
+          [mix(c.base, c.dark, 0.4), mix(c.base, c.dark, 0.12), c.base, c.base, mix(c.base, c.dark, 0.12), mix(c.base, c.dark, 0.4)],
+          [0, l * 0.5, l, r, 1 - (1 - r) * 0.5, 1],
         ),
     );
-
-    // Façade en aluminium anodisé, mate et bombée comme un coussin : unie
-    // au milieu, elle s'éclaircit en tombant vers les bords.
-    final c = color;
-    final front = outer.deflate(2);
-    canvas.save();
-    canvas.clipRRect(front);
-    canvas.drawRect(Offset.zero & size, Paint()..color = c.base);
-    // (Des filets emboîtés plutôt qu'un flou : régulier jusque dans les
-    // coins.)
-    const bevel = 30.0, steps = 20;
-    for (var i = 0; i < steps; i++) {
-      final t = 1 - i / steps;
-      canvas.drawRRect(
-        front.deflate(bevel * (i + 0.5) / steps),
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = bevel / steps + 0.6
-          ..color = c.light.withValues(alpha: t * t * 0.85),
-      );
-    }
-    // La lumière vient d'en haut à gauche : le coin opposé reste un peu
-    // dans l'ombre.
+    // Tranches du haut et du bas : à peine plus sombres au bord, un filet
+    // de lumière discret juste dessous en haut.
     canvas.drawRect(
-      Offset.zero & size,
+      all,
       Paint()
-        ..shader = ui.Gradient.linear(
-          Offset.zero,
-          Offset(size.width, size.height),
-          [Colors.white.withValues(alpha: 0.06), Colors.white.withValues(alpha: 0), Colors.black.withValues(alpha: 0.14)],
-          const [0, 0.5, 1],
-        ),
-    );
-    paintSatin(canvas, size, strength: color == NanoColor.noir ? 0.6 : 1);
-    canvas.restore();
-    // Arête de la façade.
-    canvas.drawRRect(
-      front.deflate(0.5),
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1
         ..shader = ui.Gradient.linear(
           Offset.zero,
           Offset(0, size.height),
-          [Colors.white.withValues(alpha: 0.45), Colors.black.withValues(alpha: 0.18)],
+          [
+            Colors.black.withValues(alpha: 0.15),
+            Colors.black.withValues(alpha: 0),
+            Colors.white.withValues(alpha: 0.12),
+            Colors.white.withValues(alpha: 0),
+            Colors.black.withValues(alpha: 0),
+            Colors.white.withValues(alpha: 0.05),
+            Colors.black.withValues(alpha: 0.15),
+          ],
+          [0, y(5), y(11), y(30), 1 - y(22), 1 - y(11), 1],
         ),
+    );
+    // Plus clair vers le haut, d'où vient la lumière.
+    canvas.drawRect(
+      all,
+      Paint()
+        ..shader = ui.Gradient.linear(Offset.zero, Offset(0, size.height), [
+          Colors.white.withValues(alpha: 0.10),
+          Colors.white.withValues(alpha: 0),
+          Colors.black.withValues(alpha: 0.10),
+        ], const [0, 0.5, 1]),
+    );
+    paintSatin(canvas, size, strength: color == NanoColor.noir ? 0.6 : 1);
+    canvas.restore();
+
+    // Arêtes : un filet de lumière en haut, plus sombre en bas.
+    canvas.drawRRect(
+      outer.deflate(1),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..shader = ui.Gradient.linear(Offset.zero, Offset(0, size.height), [
+          Colors.white.withValues(alpha: 0.35),
+          Colors.white.withValues(alpha: 0.06),
+          Colors.black.withValues(alpha: 0.22),
+        ], const [0, 0.5, 1]),
+    );
+    canvas.drawRRect(
+      outer.deflate(0.25),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.5
+        ..color = Colors.black.withValues(alpha: 0.35),
     );
 
     // Écran sous une vitre noire.

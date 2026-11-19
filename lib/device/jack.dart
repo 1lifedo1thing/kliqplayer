@@ -58,12 +58,12 @@ class JackPainter extends CustomPainter {
   /// Prise sur la tranche du bas : câble qui part vers le bas de la fenêtre.
   final bool fromBelow;
 
-  /// De combien la scène est décalée vers le bas dans la fenêtre (iPod tenu
+  /// De combien la scène est décalée vers le bas dans la fenêtre (baladeur tenu
   /// ou posé ailleurs qu'à sa place) : le câble va quand même jusqu'au bord.
   final double shiftY;
 
   /// Voyant de la prise, de 0 à 1 : vert quand la fenêtre a le clavier
-  /// (H J K L pilotent l'iPod) ; éteint, il faut d'abord cliquer sur l'iPod.
+  /// (H J K L pilotent le baladeur) ; éteint, il faut d'abord cliquer sur le baladeur.
   /// Les valeurs entre les deux font le fondu.
   final double glow;
 

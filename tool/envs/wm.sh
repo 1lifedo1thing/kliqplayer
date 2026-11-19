@@ -26,7 +26,7 @@ set -euo pipefail
 
 root=$(cd "$(dirname "$0")/../.." && pwd)
 bundle="$root/build/linux/x64/release/bundle"
-music="${LECTEUR_MUSIC:-$HOME/Music/Musique Ipod}"
+music="${LECTEUR_MUSIC:-$HOME/Music}"
 home="$HOME/.local/share/lecteur-envs/wm"
 box=lecteur-wm
 size=${WM_SIZE:-1280x800}

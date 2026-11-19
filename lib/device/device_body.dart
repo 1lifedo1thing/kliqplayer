@@ -1,7 +1,7 @@
-part of 'ipod.dart';
+part of 'device.dart';
 
-class IpodDevice extends StatefulWidget {
-  const IpodDevice({
+class DeviceBody extends StatefulWidget {
+  const DeviceBody({
     super.key,
     required this.model,
     required this.player,
@@ -12,11 +12,11 @@ class IpodDevice extends StatefulWidget {
     this.onHoldEnd,
   });
 
-  final IpodModel model;
+  final DeviceModel model;
   final PlayerController player;
 
   /// Navigation de la scène, passée d'un appareil à l'autre.
-  final IpodNav nav;
+  final DeviceNav nav;
 
   /// On commence à déplacer la fenêtre en tenant l'appareil.
   final VoidCallback? onWindowDrag;
@@ -30,11 +30,11 @@ class IpodDevice extends StatefulWidget {
   final VoidCallback? onHoldEnd;
 
   @override
-  State<IpodDevice> createState() => _IpodDeviceState();
+  State<DeviceBody> createState() => _DeviceBodyState();
 }
 
-class _IpodDeviceState extends State<IpodDevice> {
-  IpodNav get _nav => widget.nav;
+class _DeviceBodyState extends State<DeviceBody> {
+  DeviceNav get _nav => widget.nav;
   final _focus = FocusNode(debugLabel: 'baladeur');
 
   @override
@@ -276,7 +276,7 @@ class _IpodDeviceState extends State<IpodDevice> {
           clipBehavior: Clip.none,
           children: [
             ?_hold(m),
-            // On attrape l'iPod n'importe où (sauf la molette et les boutons,
+            // On attrape le baladeur n'importe où (sauf la molette et les boutons,
             // posés par-dessus) pour déplacer la fenêtre.
             Positioned.fill(
               child: GestureDetector(
@@ -313,7 +313,7 @@ class _IpodDeviceState extends State<IpodDevice> {
                       size: m.look.size,
                       // Couche à part : l'écran s'anime (menus, Cover Flow,
                       // progression) sans faire repeindre la coque autour.
-                      child: RepaintBoundary(child: IpodScreen(nav: _nav, player: widget.player, look: m.look)),
+                      child: RepaintBoundary(child: DeviceScreen(nav: _nav, player: widget.player, look: m.look)),
                     ),
                   ),
                 ),
@@ -335,7 +335,7 @@ class _IpodDeviceState extends State<IpodDevice> {
               ),
             Positioned.fromRect(
               rect: wheelRect,
-              child: IpodWheel(style: m.wheel, onScroll: _scroll, onDown: _down, onUp: _up, onCancel: _cancelPress),
+              child: DeviceWheel(style: m.wheel, onScroll: _scroll, onDown: _down, onUp: _up, onCancel: _cancelPress),
             ),
           ],
         ),
@@ -344,7 +344,7 @@ class _IpodDeviceState extends State<IpodDevice> {
   }
 
   /// Le verrou, qui dépasse de la tranche.
-  Widget? _hold(IpodModel m) {
+  Widget? _hold(DeviceModel m) {
     final h = m.hold;
     if (h == null) return null;
     return Positioned(
@@ -362,7 +362,7 @@ class _IpodDeviceState extends State<IpodDevice> {
 
   /// Où on clique pour le pousser : le bord du boîtier, juste sous lui (ce
   /// qui dépasse est trop fin, et hors du boîtier).
-  Widget? _holdTouch(IpodModel m) {
+  Widget? _holdTouch(DeviceModel m) {
     final h = m.hold;
     if (h == null) return null;
     return Positioned(

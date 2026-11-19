@@ -151,9 +151,11 @@ class WheelPainter extends CustomPainter {
       );
     }
 
-    if (s.labels) s.shuffle ? _shuffleLabels(canvas, c) : _labels(canvas, c);
+    // L'anneau mécanique et le relief de sa couronne d'abord : les
+    // inscriptions restent nettes par-dessus.
     final inner = s.innerRadius;
     if (inner != null) _mechanical(canvas, c, inner);
+    if (s.labels) s.shuffle ? _shuffleLabels(canvas, c) : _labels(canvas, c);
 
     // Bouton central, séparé de la molette par une fine rainure.
     canvas.drawCircle(c, b + 2.5 * s.iconScale, Paint()..color = s.groove);
@@ -200,6 +202,38 @@ class WheelPainter extends CustomPainter {
   /// fines marques pour qu'on le voie tourner.
   void _mechanical(Canvas canvas, Offset c, double r) {
     final s = style;
+    final outer = s.radius;
+    // Couronne des quatre boutons bombée : ombre au pied, lumière à
+    // mi-pente, ombre au bord.
+    final k = (r + 3) / outer;
+    canvas.drawPath(
+      Path()
+        ..fillType = PathFillType.evenOdd
+        ..addOval(Rect.fromCircle(center: c, radius: outer))
+        ..addOval(Rect.fromCircle(center: c, radius: r + 3)),
+      Paint()
+        ..shader = ui.Gradient.radial(c, outer, [
+          Colors.black.withValues(alpha: 0.05),
+          Colors.white.withValues(alpha: 0.30),
+          Colors.black.withValues(alpha: 0.04),
+        ], [k, k + (1 - k) * 0.4, 1]),
+    );
+    // Fentes entre les quatre boutons, en diagonale : un trait d'ombre
+    // doublé d'un filet de lumière.
+    for (var i = 0; i < 4; i++) {
+      final a = math.pi / 4 + i * math.pi / 2;
+      final dir = Offset(math.cos(a), math.sin(a));
+      final side = Offset(-dir.dy, dir.dx);
+      final from = c + dir * (r + 3), to = c + dir * (outer - 1.5);
+      canvas.drawLine(from, to, Paint()..color = s.groove..strokeWidth = 2);
+      canvas.drawLine(
+        from + side * 1.5,
+        to + side * 1.5,
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.7)
+          ..strokeWidth = 1,
+      );
+    }
     canvas.drawCircle(c, r + 3, Paint()..color = s.groove);
     canvas.drawCircle(
       c,
@@ -308,8 +342,8 @@ class WheelPainter extends CustomPainter {
 
 /// Molette tactile : on la fait tourner en glissant en cercle (ou à la
 /// molette de la souris), on clique sur ses quatre côtés ou au centre.
-class IpodWheel extends StatefulWidget {
-  const IpodWheel({
+class DeviceWheel extends StatefulWidget {
+  const DeviceWheel({
     super.key,
     required this.style,
     required this.onScroll,
@@ -325,10 +359,10 @@ class IpodWheel extends StatefulWidget {
   final VoidCallback onCancel;
 
   @override
-  State<IpodWheel> createState() => _IpodWheelState();
+  State<DeviceWheel> createState() => _DeviceWheelState();
 }
 
-class _IpodWheelState extends State<IpodWheel> {
+class _DeviceWheelState extends State<DeviceWheel> {
   /// Un cran tous les 18° : un tour complet fait défiler 20 lignes.
   static const _step = 2 * math.pi / 20;
 

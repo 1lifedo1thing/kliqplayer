@@ -1,6 +1,6 @@
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lecteur/ipod/ipod.dart';
+import 'package:lecteur/device/device.dart';
 
 void main() {
   const classic = Size(440, 740);

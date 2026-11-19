@@ -12,13 +12,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lecteur/core/library.dart';
 import 'package:lecteur/core/player.dart';
 import 'package:lecteur/core/strings.dart';
-import 'package:lecteur/ipod/ipod.dart';
+import 'package:lecteur/device/device.dart';
 
 import 'studio.dart';
 
 const _out = 'site/img/drawer';
 
-/// Année de sortie de chaque famille (ipodModels suit cet ordre).
+/// Année de sortie de chaque famille (deviceModels suit cet ordre).
 const _years = {
   'gen1': 2001, 'gen2': 2002, 'gen3': 2003, 'mini': 2004, 'gen4': 2004, 'photo': 2004, 'shuffle1': 2005,
   'mini2': 2005, 'nano1': 2005, 'gen5': 2005, 'nano2': 2006, 'shuffle2': 2006, 'classic': 2007, 'nano': 2007,
@@ -29,7 +29,7 @@ void main() {
   setUpStudio(_out);
   final list = <Map<String, Object>>[];
 
-  for (final model in ipodModels) {
+  for (final model in deviceModels) {
     testWidgets(model.id, (tester) async {
       final player = PlayerController.preview(
         tracks: [const Track(id: '/x/a.mp3', title: 'Shelter from the Storm', artist: 'Bob Dylan', album: 'Hard Rain')],
@@ -40,7 +40,7 @@ void main() {
       );
       await showStage(tester, player, model);
       await decode(tester);
-      final device = tester.getRect(find.byType(IpodDevice));
+      final device = tester.getRect(find.byType(DeviceBody));
       // Ses coins arrondis, à l'échelle où il est dessiné (le tiroir rangé dépasse derrière).
       final corner = model.cornerRadius * device.width / model.size.width;
       await capture(tester, '$_out/${model.id}.png', crop: device, corner: corner, scale: 2.5);
@@ -57,7 +57,7 @@ void main() {
 
   tearDownAll(() {
     // Rendu partiel (--plain-name) : la liste resterait incomplète, on garde l'ancienne.
-    if (list.length != ipodModels.length) return;
+    if (list.length != deviceModels.length) return;
     File('$_out/models.js').writeAsStringSync(
         '// Écrit par tool/studio/drawer_models_test.dart : ne pas modifier à la main.\n'
         'window.KLIQ_MODELS = ${const JsonEncoder.withIndent('  ').convert(list)};\n');

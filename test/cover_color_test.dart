@@ -53,4 +53,17 @@ void main() {
     expect(coverMatchCount(rare), 3, reason: 'assoupli jusqu\'à 12 %, pas en dessous');
     expect(coverMatchCount(sorted([0.09, 0.06, 0.04, for (var i = 0; i < 97; i++) 0.0])), 2, reason: 'les 3 plus proches, s\'ils ont 5 %');
   });
+
+  test('chaque pochette sort dans au moins une couleur, même sous tous les seuils', () {
+    final r = math.Random(1);
+    // 200 albums, 9 teintes : la plupart pâles partout, quelques-uns tout gris (0 partout).
+    final shares = [
+      for (var i = 0; i < 200; i++) [for (var c = 0; c < 9; c++) i % 20 == 0 ? 0.0 : r.nextDouble() * (i < 30 ? 0.8 : 0.1)],
+    ];
+    final seen = {for (var c = 0; c < 9; c++) ...coverPick(shares, c)};
+    expect(seen.length, 200);
+    final mine = coverPick(shares, 2);
+    expect(mine, [...mine]..sort((a, b) => shares[b][2].compareTo(shares[a][2])), reason: 'du plus assorti au moins assorti');
+    expect(coverPick([[0.0, 0.0]], 0), [0], reason: 'à égalité : la première teinte');
+  });
 }

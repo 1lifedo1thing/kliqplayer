@@ -1,8 +1,8 @@
-part of 'ipod.dart';
+part of 'device.dart';
 
 /// Banc d'essai des animations (LECTEUR_BENCH), à part de la scène qu'il
 /// pilote.
-extension _Bench on _IpodStageState {
+extension _Bench on _DeviceStageState {
   /// LECTEUR_BENCH=1 : joue chaque animation l'une après l'autre (menus,
   /// Cover Flow, En lecture, tiroir, teintes, échanges) et affiche pour
   /// chacune les temps d'image (construction ui, rendu raster), puis quitte.
@@ -64,9 +64,9 @@ extension _Bench on _IpodStageState {
     final volume = widget.player.volume;
     final start = _model;
     widget.player.setVolume(0);
-    // Montée de l'iPod, puis la prise qui se branche et l'écran qui s'allume.
+    // Montée du baladeur, puis la prise qui se branche et l'écran qui s'allume.
     await run('démarrage', () async {
-      ipodLanded.addListener(() => stdout.writeln('[bench]   arrivé @${now() - t0}ms'));
+      deviceLanded.addListener(() => stdout.writeln('[bench]   arrivé @${now() - t0}ms'));
       screenPower.addListener(() => stdout.writeln('[bench]   écran ${screenPower.value} @${now() - t0}ms'));
       await wait(3000);
     });
@@ -140,7 +140,7 @@ extension _Bench on _IpodStageState {
         await wait(600);
       }
     });
-    // L'iPod d'un bord à l'autre de la fenêtre, puis remis à sa place.
+    // Le baladeur d'un bord à l'autre de la fenêtre, puis remis à sa place.
     final place = _placeTarget;
     if (_canPlace) {
       await run('déplacer', () async {
@@ -161,12 +161,12 @@ extension _Bench on _IpodStageState {
     });
     _setOpen(true);
     await wait(1100);
-    final family = _IpodStageState._families.firstWhere((f) => f.first.family == _model.family);
+    final family = _DeviceStageState._families.firstWhere((f) => f.first.family == _model.family);
     // Souris sur le tiroir, comme quand on clique une pastille.
     _drawerHover(true);
     await wait(500);
     await run('teinte', () async {
-      for (final m in family.length > 1 ? [...family.skip(1), family.first] : <IpodModel>[]) {
+      for (final m in family.length > 1 ? [...family.skip(1), family.first] : <DeviceModel>[]) {
         stdout.writeln('[bench]   choix @${now() - t0}ms');
         _choose(m);
         await wait(700);
@@ -177,7 +177,7 @@ extension _Bench on _IpodStageState {
       await wait(1200);
     });
     await run('échange', () async {
-      final other = start.family == 'mini' ? ipodModels.firstWhere((m) => m.family == 'nano4') : ipodModels.firstWhere((m) => m.family == 'mini');
+      final other = start.family == 'mini' ? deviceModels.firstWhere((m) => m.family == 'nano4') : deviceModels.firstWhere((m) => m.family == 'mini');
       _pick(other);
       await wait(4500);
       _setOpen(true);

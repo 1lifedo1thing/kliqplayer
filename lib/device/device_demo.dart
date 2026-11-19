@@ -1,25 +1,25 @@
-part of 'ipod.dart';
+part of 'device.dart';
 
 /// Démo filmée (LECTEUR_DEMO=fichier.json), sous Hyprland 0.57 (config en
 /// Lua) : l'appli joue elle-même le rôle de l'utilisateur, étape par étape,
 /// avec le vrai curseur.
 ///
-/// Le fichier : {"go": chemin, "start": id du premier iPod, "steps": [...]}.
+/// Le fichier : {"go": chemin, "start": id du premier baladeur, "steps": [...]}.
 /// Étapes : {"coverflow": ms} navigue dans Cover Flow ; {"tint": id} prend
-/// cet iPod dans le tiroir, par sa pastille ; {"colorShuffle": true} ;
+/// ce baladeur dans le tiroir, par sa pastille ; {"colorShuffle": true} ;
 /// {"next": true} ; {"wait": ms} ; {"exec": commande, "rect": [x, y, l, h]}
-/// ou {"exec": …, "above": [l, h]} (fenêtre flottante, au-dessus de l'iPod).
+/// ou {"exec": …, "above": [l, h]} (fenêtre flottante, au-dessus du baladeur).
 /// La démo se prépare, écrit « [demo] prêt », puis attend que le fichier
 /// « go » existe (l'enregistrement a commencé).
-extension _Demo on _IpodStageState {
+extension _Demo on _DeviceStageState {
   Future<void> _demo() async {
     final cfg = jsonDecode(File(Platform.environment['LECTEUR_DEMO']!).readAsStringSync()) as Map<String, Object?>;
     final steps = (cfg['steps'] as List).cast<Map<String, Object?>>();
     Future<void> wait(int ms) => Future<void>.delayed(Duration(milliseconds: ms));
-    IpodModel model(Object? id) => ipodModels.firstWhere((m) => m.id == id);
+    DeviceModel model(Object? id) => deviceModels.firstWhere((m) => m.id == id);
     final player = widget.player;
 
-    while (player.loading || player.albums.isEmpty || !ipodLanded.value || _phase != _Swap.none) {
+    while (player.loading || player.albums.isEmpty || !deviceLanded.value || _phase != _Swap.none) {
       await wait(200);
     }
     final start = model(cfg['start']);
@@ -100,7 +100,7 @@ extension _Demo on _IpodStageState {
 
   /// Prend [m] dans le tiroir : le curseur va jusqu'à la poignée, le tiroir
   /// sort, le curseur passe sur l'emplacement puis sur la pastille.
-  Future<void> _demoTint(IpodModel m) async {
+  Future<void> _demoTint(DeviceModel m) async {
     Future<void> wait(int ms) => Future<void>.delayed(Duration(milliseconds: ms));
     final dev = _rectOf(_deviceKeys[_model.id]);
     if (dev == null) return;
@@ -132,12 +132,12 @@ extension _Demo on _IpodStageState {
   }
 
   /// La pastille de [m] dans le tiroir, dans le repère de la scène.
-  Rect? _swatchRect(IpodModel m) {
+  Rect? _swatchRect(DeviceModel m) {
     Rect? found;
     void visit(Element e) {
       if (found != null) return;
       final w = e.widget;
-      if (w.runtimeType.toString() == '_Swatch' && ((w as dynamic).model as IpodModel).id == m.id) {
+      if (w.runtimeType.toString() == '_Swatch' && ((w as dynamic).model as DeviceModel).id == m.id) {
         final box = e.findRenderObject();
         final stage = _stageKey.currentContext?.findRenderObject();
         if (box is RenderBox && stage is RenderBox && box.attached && box.hasSize) {
@@ -153,7 +153,7 @@ extension _Demo on _IpodStageState {
   }
 
   /// Ouvre [cmd] dans une fenêtre flottante : en [rect] à l'écran, ou de la
-  /// taille [above] juste au-dessus de l'iPod.
+  /// taille [above] juste au-dessus du baladeur.
   Future<void> _demoExec(String cmd, Map<String, Object?> step) async {
     List<int> nums(Object? v) => [for (final n in v as List) (n as num).round()];
     late int x, y, w, h;

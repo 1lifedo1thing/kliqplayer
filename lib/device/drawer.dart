@@ -14,18 +14,18 @@ import '../core/strings.dart';
 /// Épaisseur de la façade du tiroir (celle où l'on glisse le doigt).
 const double drawerFront = 26;
 
-/// Le tiroir qui sort de derrière l'iPod : coque en aluminium, fond en
+/// Le tiroir qui sort de derrière le baladeur : coque en aluminium, fond en
 /// mousse noire, un emplacement par modèle avec ses teintes en pastilles.
 /// L'emplacement du modèle en main est vide.
 ///
 /// La façade est du côté extérieur ([frontOnRight] : il sort vers la
-/// droite) ; de l'autre côté, la coque se prolonge derrière l'iPod.
+/// droite) ; de l'autre côté, la coque se prolonge derrière le baladeur.
 /// Clic sur une teinte de l'éventail : [folded] se termine une fois les
 /// autres teintes rangées derrière l'appareil.
-typedef SwatchCallback = void Function(IpodModel model, Future<void> folded);
+typedef SwatchCallback = void Function(DeviceModel model, Future<void> folded);
 
-class IpodDrawer extends StatelessWidget {
-  const IpodDrawer({
+class DeviceDrawer extends StatelessWidget {
+  const DeviceDrawer({
     super.key,
     required this.families,
     required this.current,
@@ -43,18 +43,18 @@ class IpodDrawer extends StatelessWidget {
   final bool frontOnRight;
 
   /// Les modèles, regroupés par famille (une liste par emplacement).
-  final List<List<IpodModel>> families;
-  final IpodModel current;
+  final List<List<DeviceModel>> families;
+  final DeviceModel current;
 
   /// Teinte affichée dans chaque emplacement, par famille.
-  final Map<String, IpodModel> shown;
+  final Map<String, DeviceModel> shown;
 
   /// Largeur visible (façade et emplacements), mesurée depuis la façade ;
-  /// la coque se prolonge au-delà, cachée derrière l'iPod.
+  /// la coque se prolonge au-delà, cachée derrière le baladeur.
   final double contentWidth;
 
   /// Clic sur un appareil : on le prend en main.
-  final ValueChanged<IpodModel> onPick;
+  final ValueChanged<DeviceModel> onPick;
 
   /// Clic sur une pastille.
   final SwatchCallback onSwatch;
@@ -247,16 +247,16 @@ class _Slot extends StatefulWidget {
   });
 
   final GlobalKey? shapeKey;
-  final List<IpodModel> variants;
-  final IpodModel shown;
+  final List<DeviceModel> variants;
+  final DeviceModel shown;
 
   /// Hauteur du plus grand appareil : chacun est centré dans cette
   /// hauteur, pour que les appareils et les noms d'une même ligne soient
   /// alignés.
   final double rowHeight;
-  final IpodModel current;
+  final DeviceModel current;
   final double scale;
-  final ValueChanged<IpodModel> onPick;
+  final ValueChanged<DeviceModel> onPick;
   final SwatchCallback onSwatch;
 
   @override
@@ -351,7 +351,7 @@ class _SlotState extends State<_Slot> with SingleTickerProviderStateMixin {
 
   /// Teinte survolée parmi les pastilles : l'appareil la prend le temps du
   /// survol.
-  IpodModel? _preview;
+  DeviceModel? _preview;
 
   /// Pointeur sur l'emplacement entier (appareil, nom, pastilles).
   bool _inSlot = false;
@@ -370,11 +370,11 @@ class _SlotState extends State<_Slot> with SingleTickerProviderStateMixin {
   /// qu'elles étaient (sinon, l'appareil de devant changeant de teinte, elles
   /// se réorganiseraient en pleine course), la carte choisie en moins : elle
   /// est passée devant.
-  List<IpodModel>? _folding;
+  List<DeviceModel>? _folding;
   String? _chosenId;
 
   /// Les autres teintes, celles de l'éventail (pas celle qu'on voit déjà).
-  List<IpodModel> get _others {
+  List<DeviceModel> get _others {
     if (_folding case final folding?) return folding;
     final front = _empty ? widget.current : widget.shown;
     return [for (final v in widget.variants) if (v.id != front.id) v];
@@ -451,7 +451,7 @@ class _SlotState extends State<_Slot> with SingleTickerProviderStateMixin {
 
   /// Clic sur une teinte : l'éventail se range aussitôt, même si le
   /// pointeur reste dessus. Le résultat se termine une fois rangé.
-  Future<void> _pick(IpodModel chosen) {
+  Future<void> _pick(DeviceModel chosen) {
     _folding = _others;
     _chosenId = chosen.id;
     _picked = true;
@@ -466,7 +466,7 @@ class _SlotState extends State<_Slot> with SingleTickerProviderStateMixin {
   }
 
   /// L'appareil de l'emplacement : soulevé au survol.
-  Widget _device(IpodModel m, Size size, double radius, bool lifted) {
+  Widget _device(DeviceModel m, Size size, double radius, bool lifted) {
     return AnimatedScale(
       scale: lifted ? 1.06 : 1,
       duration: const Duration(milliseconds: 260),
@@ -488,7 +488,7 @@ class _SlotState extends State<_Slot> with SingleTickerProviderStateMixin {
           borderRadius: BorderRadius.circular(radius),
           child: SizedBox.fromSize(
             size: size,
-            child: _Frozen(key: ValueKey(m.id), child: FittedBox(child: IpodPreview(model: m))),
+            child: _Frozen(key: ValueKey(m.id), child: FittedBox(child: DevicePreview(model: m))),
           ),
         ),
       ),
@@ -555,7 +555,7 @@ class _SlotState extends State<_Slot> with SingleTickerProviderStateMixin {
     }
 
     // Ce qu'on voit : la carte survolée monte un peu et grossit.
-    Widget cardFor(int i, IpodModel v) {
+    Widget cardFor(int i, DeviceModel v) {
       if (v.id == _chosenId) return const SizedBox.shrink();
       final hovered = _fanHover == v.id;
       final p = progress(i);
@@ -580,7 +580,7 @@ class _SlotState extends State<_Slot> with SingleTickerProviderStateMixin {
     // Où l'on vise : la place de la carte au repos, dans un ordre fixe. Si
     // elle suivait la carte qui monte et passe devant, le pointeur, à la
     // jonction de deux cartes, sauterait de l'une à l'autre sans arrêt.
-    Widget targetFor(int i, IpodModel v) {
+    Widget targetFor(int i, DeviceModel v) {
       final (rect, m) = place(i, progress(i));
       return Positioned.fromRect(
         key: ValueKey(('cible', v.id)),
@@ -710,7 +710,7 @@ class _SlotState extends State<_Slot> with SingleTickerProviderStateMixin {
                       // peint), marque encore l'emplacement de sa famille.
                       if (empty)
                         Positioned.fill(
-                          child: Opacity(opacity: 0, child: FittedBox(child: IpodPreview(model: widget.current))),
+                          child: Opacity(opacity: 0, child: FittedBox(child: DevicePreview(model: widget.current))),
                         ),
                       // Vide, il montre en transparence la pastille survolée.
                       if (empty && _preview != null && _preview!.id != widget.current.id)
@@ -804,7 +804,7 @@ class _SlotState extends State<_Slot> with SingleTickerProviderStateMixin {
 class _FanCard extends StatelessWidget {
   const _FanCard({required this.model, required this.size, required this.radius, required this.raised});
 
-  final IpodModel model;
+  final DeviceModel model;
   final Size size;
   final double radius;
   final bool raised;
@@ -827,7 +827,7 @@ class _FanCard extends StatelessWidget {
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(radius),
-            child: SizedBox.fromSize(size: size, child: FittedBox(child: IpodPreview(model: model))),
+            child: SizedBox.fromSize(size: size, child: FittedBox(child: DevicePreview(model: model))),
           ),
         ),
       ),
@@ -874,7 +874,7 @@ class _Engraved extends StatelessWidget {
 class _Swatch extends StatefulWidget {
   const _Swatch({required this.model, required this.selected, required this.onTap, required this.onHover});
 
-  final IpodModel model;
+  final DeviceModel model;
   final bool selected;
   final VoidCallback onTap;
   final ValueChanged<bool> onHover;
@@ -1032,10 +1032,10 @@ class _RenderBleed extends RenderShiftedBox {
 }
 
 /// L'appareil en miniature, rangé écran éteint.
-class IpodPreview extends StatelessWidget {
-  const IpodPreview({super.key, required this.model});
+class DevicePreview extends StatelessWidget {
+  const DevicePreview({super.key, required this.model});
 
-  final IpodModel model;
+  final DeviceModel model;
 
   @override
   Widget build(BuildContext context) {
@@ -1411,8 +1411,7 @@ class _ScrollingSlotsState extends State<_ScrollingSlots> {
   Widget build(BuildContext context) {
     return ScrollConfiguration(
       behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false, overscroll: false),
-      // Même butée élastique que quand on tire le tiroir au-delà de sa sortie :
-      // 0,35 × sa course, avec la même courbe.
+      // Butée élastique de 0,35 × la largeur, même courbe que le tiroir.
       child: LayoutBuilder(
         builder: (context, box) => SingleChildScrollView(
           controller: _controller,

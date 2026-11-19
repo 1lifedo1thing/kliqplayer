@@ -16,14 +16,15 @@ import 'sources/local/local_source.dart';
 import 'sources/spotify/librespot.dart';
 import 'sources/spotify/official_app.dart';
 import 'sources/spotify/spotify_source.dart';
-import 'ipod/ipod.dart';
-import 'ipod/screen.dart';
+import 'device/device.dart';
+import 'device/screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
   checkForUpdate(); // sans attendre : la ligne apparaît dans le menu principal
-  // Fenêtre sans décor ni fond : l'iPod flotte seul sur le bureau.
+  _cleanOldSettings(); // avant de lire le modèle choisi (taille de la fenêtre)
+  // Fenêtre sans décor ni fond : le baladeur flotte seul sur le bureau.
   final window = _window;
   if (window != null) {
     window
@@ -34,16 +35,16 @@ Future<void> main() async {
       // Windows dessine une ombre rectangulaire autour de chaque fenêtre :
       // autour d'une fenêtre transparente, elle trahirait le cadre. Et, faute
       // de gestionnaire qui range les fenêtres, celle-ci couvre toute la zone
-      // de travail : l'iPod s'y déplace, le reste laisse voir (et cliquer) le
+      // de travail : le baladeur s'y déplace, le reste laisse voir (et cliquer) le
       // bureau.
       window.hasShadow = false;
       fillWorkArea(window);
     } else {
       final work = primaryWorkArea();
-      final size = fitWindowSize(IpodStage.savedModel.windowSize, work);
+      final size = fitWindowSize(DeviceStage.savedModel.windowSize, work);
       if (Platform.isLinux && work != null) {
         // Taille et place d'un coup, au milieu de la zone de travail : centrer
-        // après coup se ferait avec l'ancienne taille, et le bas de l'iPod
+        // après coup se ferait avec l'ancienne taille, et le bas du baladeur
         // sortirait d'un petit écran. (Sous Wayland, le compositeur place.)
         window.contentBounds = Rect.fromCenter(center: work.center, width: size.width, height: size.height).toNative();
       } else {
@@ -72,8 +73,6 @@ Future<void> main() async {
 
   if (Platform.environment['LECTEUR_FPS'] != null) _logFrameTimings();
 
-  // Restes d'anciennes versions.
-  Settings.remove(const ['deck', 'ipod.zoom', 'spotify.device']);
 
   final player = _player();
   // Arrêté de l'extérieur (kill, fin de session) : on enregistre quand même.
@@ -216,23 +215,35 @@ class _LecteurAppState extends State<LecteurApp> {
           focusNode: _keys,
           autofocus: true,
           onKeyEvent: _onKey,
-          child: _RiseIn(child: IpodStage(player: widget.player)),
+          child: _RiseIn(child: DeviceStage(player: widget.player)),
         ),
       ),
     );
   }
 }
 
-/// Au lancement, l'iPod monte du bas de la fenêtre jusqu'à sa place.
+/// Restes d'anciennes versions. Les réglages de l'appareil ont changé de
+/// préfixe : seul endroit où l'ancien reste écrit, pour les retrouver.
+void _cleanOldSettings() {
+  const old = 'ipod.';
+  const moved = ['model', 'place', 'freeAt', 'keys', 'customKeys', 'backlight', 'clicker', 'clickPitch'];
+  for (final key in moved) {
+    final value = Settings.getString('$old$key');
+    if (value != null && Settings.getString('device.$key') == null) Settings.setString('device.$key', value);
+  }
+  Settings.remove(['deck', '${old}zoom', 'spotify.device', for (final key in moved) '$old$key']);
+}
+
+/// Au lancement, le baladeur monte du bas de la fenêtre jusqu'à sa place.
 ///
-/// Pendant la montée, l'iPod est une photo (SnapshotWidget) : chaque image
+/// Pendant la montée, le baladeur est une photo (SnapshotWidget) : chaque image
 /// ne fait que déplacer cette photo au lieu de redessiner tout l'appareil.
-/// L'iPod monte débranché, écran éteint ; une fois arrivé, la prise
+/// Le baladeur monte débranché, écran éteint ; une fois arrivé, la prise
 /// descend se brancher et l'écran s'allume au clic.
 /// La montée attend que la première image soit affichée, pour ne pas se
 /// disputer le démarrage (compilation des shaders, chargement de la
 /// bibliothèque) et sauter des images.
-/// Montée « à la Apple » : la vitesse suit une cloche de Gauss (un peu
+/// Montée naturelle : la vitesse suit une cloche de Gauss (un peu
 /// penchée vers l'avant). Départ tout en douceur, une vraie poussée au
 /// milieu, et une longue arrivée feutrée — bien plus contrastée qu'un
 /// easeInOutSine, sans le départ brutal d'un easeOutCubic.
@@ -288,11 +299,11 @@ class _RiseInState extends State<_RiseIn> with SingleTickerProviderStateMixin {
   void initState() {
     super.initState();
     screenPower.value = false;
-    ipodLanded.value = false;
+    deviceLanded.value = false;
     _rise.addStatusListener((s) {
       if (s != AnimationStatus.completed) return;
       _snap.allowSnapshotting = false;
-      ipodLanded.value = true; // la prise descend, l'écran s'allumera au clic
+      deviceLanded.value = true; // la prise descend, l'écran s'allumera au clic
     });
     WidgetsBinding.instance.waitUntilFirstFrameRasterized.then((_) async {
       await Future<void>.delayed(const Duration(milliseconds: 150));

@@ -7,8 +7,8 @@ import 'package:lecteur/core/library.dart';
 import 'package:lecteur/core/player.dart';
 import 'package:lecteur/core/source.dart';
 import 'package:lecteur/core/version.dart';
-import 'package:lecteur/ipod/nav.dart';
-import 'package:lecteur/ipod/classic.dart';
+import 'package:lecteur/device/nav.dart';
+import 'package:lecteur/device/classic.dart';
 
 /// Moteur qui note ce qu'on lui demande.
 class _Engine extends SilentEngine {
@@ -127,7 +127,7 @@ void main() {
     await p.loadLibrary();
     expect(p.notice, 'Pas de connexion');
     expect(p.tracks, isEmpty);
-    final nav = IpodNav(p, look: const ClassicModel().look);
+    final nav = DeviceNav(p, look: const ClassicModel().look);
     addTearDown(nav.dispose);
     expect((nav.page as MenuPage).entries.first.label, 'Pas de connexion', reason: 'en tête du menu principal');
     source.fail = null;
@@ -189,7 +189,7 @@ void main() {
     final p = PlayerController(source);
     addTearDown(p.dispose);
     await p.loadLibrary();
-    final nav = IpodNav(p, look: const ClassicModel().look);
+    final nav = DeviceNav(p, look: const ClassicModel().look);
     addTearDown(nav.dispose);
     void go(String label) {
       final page = nav.page as MenuPage;
@@ -237,7 +237,7 @@ void main() {
   });
 
   test('le menu principal propose la mise à jour quand il y en a une', () {
-    final nav = IpodNav(PlayerController.preview(), look: const ClassicModel().look);
+    final nav = DeviceNav(PlayerController.preview(), look: const ClassicModel().look);
     addTearDown(() => newVersion = null);
     List<String> root() => [for (final e in (nav.stack.first as MenuPage).entries) e.label];
     expect(root(), isNot(contains('Mise à jour')));

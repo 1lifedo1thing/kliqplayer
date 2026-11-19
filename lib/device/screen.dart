@@ -13,24 +13,24 @@ import 'coverflow.dart';
 import 'look.dart';
 import 'nav.dart';
 
-/// Écran sous tension. Au lancement, l'iPod monte écran éteint
+/// Écran sous tension. Au lancement, le baladeur monte écran éteint
 /// (voir main.dart) et ne s'allume qu'une fois arrivé.
 final screenPower = ValueNotifier(true);
 
 /// L'écran : barre de titre, puis la page courante qui
 /// glisse latéralement quand on entre ou sort d'un menu.
-class IpodScreen extends StatefulWidget {
-  const IpodScreen({super.key, required this.nav, required this.player, required this.look});
+class DeviceScreen extends StatefulWidget {
+  const DeviceScreen({super.key, required this.nav, required this.player, required this.look});
 
-  final IpodNav nav;
+  final DeviceNav nav;
   final PlayerController player;
   final ScreenLook look;
 
   @override
-  State<IpodScreen> createState() => _IpodScreenState();
+  State<DeviceScreen> createState() => _DeviceScreenState();
 }
 
-class _IpodScreenState extends State<IpodScreen> with SingleTickerProviderStateMixin {
+class _DeviceScreenState extends State<DeviceScreen> with SingleTickerProviderStateMixin {
   late final Ticker _ticker = createTicker(_tick);
   Duration _last = Duration.zero;
 
@@ -38,7 +38,7 @@ class _IpodScreenState extends State<IpodScreen> with SingleTickerProviderStateM
   final _slide = Spring(0, stiffness: 520, damping: 1);
   int _transition = 0;
 
-  IpodNav get nav => widget.nav;
+  DeviceNav get nav => widget.nav;
 
   @override
   void initState() {
@@ -225,19 +225,19 @@ class _IpodScreenState extends State<IpodScreen> with SingleTickerProviderStateM
     );
   }
 
-  bool _welcome(IpodPage p) => p is MenuPage && p.welcome;
+  bool _welcome(DevicePage p) => p is MenuPage && p.welcome;
 
   /// Les zones d'un menu scindé, si [p] en est un sur cet écran.
-  ({Rect menu, Rect image})? _split(IpodPage p) =>
+  ({Rect menu, Rect image})? _split(DevicePage p) =>
       p is MenuPage && p.kind == MenuKind.split ? widget.look.split(widget.look.size) : null;
 
   /// Part de la largeur que la barre de titre occupe au-dessus de [p].
-  double _barShare(IpodPage p) {
+  double _barShare(DevicePage p) {
     final parts = _split(p);
     return parts != null && parts.image.top == 0 ? parts.menu.width / widget.look.size.width : 1;
   }
 
-  Widget _bar(IpodPage p) => _welcome(p) ? const SizedBox() : widget.look.statusBar(
+  Widget _bar(DevicePage p) => _welcome(p) ? const SizedBox() : widget.look.statusBar(
         title: p.title,
         playing: widget.player.playing,
         hasTrack: widget.player.current != null,
@@ -246,7 +246,7 @@ class _IpodScreenState extends State<IpodScreen> with SingleTickerProviderStateM
       );
 
   /// La page et sa propre barre de titre, qui glissent ensemble.
-  Widget _withBar(IpodPage p) => Stack(
+  Widget _withBar(DevicePage p) => Stack(
         children: [
           Positioned.fill(child: _framed(p)),
           Positioned(
@@ -261,10 +261,10 @@ class _IpodScreenState extends State<IpodScreen> with SingleTickerProviderStateM
 
   /// La page à sa place : sous la barre de titre, sauf un menu scindé, qui
   /// se place lui-même sur l'écran entier.
-  Widget _framed(IpodPage p) =>
+  Widget _framed(DevicePage p) =>
       _split(p) != null || _welcome(p) ? _page(p) : Padding(padding: EdgeInsets.only(top: widget.look.barHeight), child: _page(p));
 
-  Widget _page(IpodPage p) => switch (p) {
+  Widget _page(DevicePage p) => switch (p) {
         MenuPage() when p.welcome => _WelcomeView(page: p, nav: nav),
         MenuPage() => _MenuView(page: p, look: widget.look, player: widget.player, lit: _lit && screenPower.value),
         SearchPage() => _SearchView(page: p, look: widget.look),
@@ -496,13 +496,13 @@ class _SearchView extends StatelessWidget {
 }
 
 /// Une page de l'accueil du premier lancement, à la manière des réglages
-/// d'Apple : petit titre gras, une liste groupée à coins arrondis, filets
+/// d'un téléphone : petit titre gras, une liste groupée à coins arrondis, filets
 /// entre les lignes, la sélection en bleu. On clique, ou on tourne la molette.
 class _WelcomeView extends StatelessWidget {
   const _WelcomeView({required this.page, required this.nav});
 
   final MenuPage page;
-  final IpodNav nav;
+  final DeviceNav nav;
 
   static const _ink = Color(0xFF1D1D1F);
   static const _grey = Color(0xFF8E8E93);

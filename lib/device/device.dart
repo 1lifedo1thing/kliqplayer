@@ -33,22 +33,22 @@ import 'screen.dart';
 import 'shuffle.dart';
 import 'wheel.dart';
 
-export 'wheel.dart' show IpodWheel, WheelStyle, WheelZone;
+export 'wheel.dart' show DeviceWheel, WheelStyle, WheelZone;
 
-part 'ipod_bench.dart';
-part 'ipod_demo.dart';
-part 'ipod_device.dart';
-part 'ipod_painters.dart';
-part 'ipod_window.dart';
+part 'device_bench.dart';
+part 'device_demo.dart';
+part 'device_body.dart';
+part 'device_painters.dart';
+part 'device_window.dart';
 
 /// Un shuffle joue dans le désordre, sauf si son interrupteur est sur
 /// « dans l'ordre » (retenu d'une fois sur l'autre).
-bool _shuffles(IpodModel m) => !m.hasScreen && Settings.getString('shuffle.order') != 'on';
+bool _shuffles(DeviceModel m) => !m.hasScreen && Settings.getString('shuffle.order') != 'on';
 
 
 /// Tous les modèles et leurs teintes, dans l'ordre du tiroir : par date de
 /// sortie.
-final List<IpodModel> ipodModels = [
+final List<DeviceModel> deviceModels = [
   const FirstGenModel(), // 2001
   const SecondGenModel(), // 2002
   const ThirdGenModel(), // 2003
@@ -77,7 +77,7 @@ final List<IpodModel> ipodModels = [
 /// de son câble, et [drawerRoom] de plus du côté du tiroir ([drawerSide] :
 /// 1 à droite, -1 à gauche, 0 tiroir rentré).
 @visibleForTesting
-Rect windowFrameFor(IpodModel model, Rect device, Rect screen, {int drawerSide = 0, double drawerRoom = 0}) {
+Rect windowFrameFor(DeviceModel model, Rect device, Rect screen, {int drawerSide = 0, double drawerRoom = 0}) {
   final margin = model.margin;
   final side = math.max(margin.left, (model.windowSize.width - device.width) / 2);
   var left = device.left - side, right = device.right + side;
@@ -88,9 +88,9 @@ Rect windowFrameFor(IpodModel model, Rect device, Rect screen, {int drawerSide =
   return Rect.fromLTRB(left, top, right, bottom);
 }
 
-/// Faux tant que l'iPod monte à l'ouverture de l'appli (main.dart) : la
+/// Faux tant que le baladeur monte à l'ouverture de l'appli (main.dart) : la
 /// prise attend qu'il soit arrivé pour se brancher.
-final ipodLanded = ValueNotifier(true);
+final deviceLanded = ValueNotifier(true);
 
 /// Étapes d'un changement d'appareil.
 enum _Swap {
@@ -118,33 +118,35 @@ enum _Swap {
 /// Sans [initial], c'est le dernier modèle choisi dans le tiroir (retenu
 /// d'un lancement à l'autre) ; avec, le modèle est imposé au départ et le
 /// choix n'est pas enregistré (tests).
-class IpodStage extends StatefulWidget {
-  const IpodStage({super.key, required this.player, this.initial});
+class DeviceStage extends StatefulWidget {
+  const DeviceStage({super.key, required this.player, this.initial});
 
   final PlayerController player;
-  final IpodModel? initial;
+  final DeviceModel? initial;
 
-  /// Pour les tests : l'iPod se déplace à la main dans la fenêtre, comme
+  /// Pour les tests : le baladeur se déplace à la main dans la fenêtre, comme
   /// sous Windows.
   @visibleForTesting
   static bool debugDragInside = false;
 
   /// Le modèle qui s'affichera au lancement.
-  static IpodModel get savedModel => _IpodStageState._saved();
+  static DeviceModel get savedModel => _DeviceStageState._saved();
 
   @override
-  State<IpodStage> createState() => _IpodStageState();
+  State<DeviceStage> createState() => _DeviceStageState();
 }
 
-class _IpodStageState extends State<IpodStage> with SingleTickerProviderStateMixin, _ManagedWindow {
-  static const _settingsKey = 'ipod.model';
+class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStateMixin, _ManagedWindow {
+  static const _settingsKey = 'device.model';
 
   @override
-  late IpodModel _model = widget.initial ?? _saved();
+  late DeviceModel _model = widget.initial ?? _saved();
 
   /// Navigation dans les menus : elle appartient à la scène, pas à
-  /// l'appareil, si bien qu'en changeant d'iPod on reste sur le même écran.
-  late final IpodNav _nav = IpodNav(widget.player, look: _model.look)..coverColor = _model.coverColor;
+  /// l'appareil, si bien qu'en changeant de baladeur on reste sur le même écran.
+  late final DeviceNav _nav = DeviceNav(widget.player, look: _model.look)
+    ..coverPalette = _model.coverPalette
+    ..coverColor = _model.coverColor;
   @override
   bool get _remember => widget.initial == null;
 
@@ -153,6 +155,10 @@ class _IpodStageState extends State<IpodStage> with SingleTickerProviderStateMix
 
   /// Ouverture du tiroir (0 fermé, 1 ouvert ; un léger rebond dépasse 1).
   final _open = Spring(0, stiffness: 230, damping: 0.78);
+
+  /// Jeu maximal du tiroir tenu par sa poignée, en pixels : en hauteur, et
+  /// vers l'extérieur une fois sorti.
+  static const double _stop = 12;
 
   /// Côté où sort le tiroir : 1 à droite, -1 à gauche (la poignée tirée).
   @override
@@ -165,12 +171,12 @@ class _IpodStageState extends State<IpodStage> with SingleTickerProviderStateMix
   int _hoverSide = 0;
   bool _wantOpen = false;
 
-  // --- Place de l'iPod dans la fenêtre : à gauche, au milieu, à droite -------
+  // --- Place du baladeur dans la fenêtre : à gauche, au milieu, à droite -------
 
-  static const _placeKey = 'ipod.place';
+  static const _placeKey = 'device.place';
   static const _placeNames = {-1: 'gauche', 0: 'milieu', 1: 'droite'};
 
-  /// Où l'iPod se tient, tiroir fermé : -1 à gauche, 0 au milieu, 1 à droite
+  /// Où le baladeur se tient, tiroir fermé : -1 à gauche, 0 au milieu, 1 à droite
   /// (retenu d'un lancement à l'autre).
   late int _placeTarget = _remember
       ? _placeNames.entries.firstWhere((e) => e.value == Settings.getString(_placeKey), orElse: () => const MapEntry(0, '')).key
@@ -185,13 +191,13 @@ class _IpodStageState extends State<IpodStage> with SingleTickerProviderStateMix
   final _movePeekR = Spring(0, stiffness: 420, damping: 0.9);
   int _hoverMove = 0;
 
-  /// Course possible de l'iPod jusqu'au bord, à la dernière mise en page.
+  /// Course possible du baladeur jusqu'au bord, à la dernière mise en page.
   double _placeReach = 0;
 
   /// Sous ce débattement, la fenêtre est trop étroite pour qu'on déplace
-  /// l'iPod (ou c'est l'appli qui règle la fenêtre autour de lui).
+  /// le baladeur (ou c'est l'appli qui règle la fenêtre autour de lui).
   bool get _canPlace =>
-      _placeReach >= 40 && !_wantOpen && _phase == _Swap.none && ipodLanded.value && !(ipodFree.value && _dragsInside);
+      _placeReach >= 40 && !_wantOpen && _phase == _Swap.none && deviceLanded.value && !(deviceFree.value && _dragsInside);
 
   /// Il reste de la place de ce côté (à gauche, on ne va pas plus à gauche).
   bool _canMove(int side) => _canPlace && (_placeTarget + side).abs() <= 1;
@@ -217,7 +223,7 @@ class _IpodStageState extends State<IpodStage> with SingleTickerProviderStateMix
     _kick();
   }
 
-  // Lâché après avoir été tenu (Windows) : l'iPod glisse d'où on l'a posé
+  // Lâché après avoir été tenu (Windows) : le baladeur glisse d'où on l'a posé
   // jusqu'à sa place. Le décalage qui reste à parcourir, ramené à zéro.
   final _backX = Spring(0, stiffness: 190, damping: 0.9);
   final _backY = Spring(0, stiffness: 190, damping: 0.9);
@@ -233,21 +239,21 @@ class _IpodStageState extends State<IpodStage> with SingleTickerProviderStateMix
   /// Tenu à la main, ou emporté par Windows : le décalage ne se résorbe pas.
   bool _backHeld = false;
 
-  // Position libre (Réglages › Position, Windows) : lâché, l'iPod reste où
+  // Position libre (Réglages › Position, Windows) : lâché, le baladeur reste où
   // on l'a posé. Ce décalage par rapport à sa place, gardé d'un lancement à
   // l'autre.
-  static const _freeKey = 'ipod.freeAt';
+  static const _freeKey = 'device.freeAt';
   late Offset _freeAt = () {
     final xy = (_remember ? Settings.getString(_freeKey) ?? '' : '').split(',').map(double.tryParse).toList();
     return xy.length == 2 && xy[0] != null && xy[1] != null ? Offset(xy[0]!, xy[1]!) : Offset.zero;
   }();
 
   /// Là où le décalage va se poser : en position libre, là où on a lâché
-  /// l'iPod, tiroir sorti ou non.
-  Offset get _backRest => ipodFree.value && _dragsInside ? _freeAt + Offset(_drawerNudge, 0) : Offset.zero;
+  /// le baladeur, tiroir sorti ou non.
+  Offset get _backRest => deviceFree.value && _dragsInside ? _freeAt + Offset(_drawerNudge, 0) : Offset.zero;
 
   /// Position libre, tiroir sorti près d'un bord de l'écran : de combien
-  /// l'iPod s'écarte du bord pour que le tiroir tienne à l'écran (il y
+  /// le baladeur s'écarte du bord pour que le tiroir tienne à l'écran (il y
   /// retourne, tiroir rentré).
   double _drawerNudge = 0;
 
@@ -274,7 +280,7 @@ class _IpodStageState extends State<IpodStage> with SingleTickerProviderStateMix
     if (!_dragsInside) return false;
     final dev = _deviceShown;
     // Tiroir sorti, échange, pas encore arrivé : il ne bouge pas.
-    if (dev == null || _wantOpen || _open.value != 0 || _phase != _Swap.none || !ipodLanded.value) return true;
+    if (dev == null || _wantOpen || _open.value != 0 || _phase != _Swap.none || !deviceLanded.value) return true;
     final origin = _origin;
     _heldPointer = origin + pointer;
     _grab = pointer - dev.center;
@@ -337,7 +343,7 @@ class _IpodStageState extends State<IpodStage> with SingleTickerProviderStateMix
     if (mounted) setState(_kick);
   }
 
-  /// Pour les tests : comme si on venait de lâcher l'iPod en [from].
+  /// Pour les tests : comme si on venait de lâcher le baladeur en [from].
   @visibleForTesting
   void debugGlideHome(Offset from, Rect window) => _glideHome(from, window);
 
@@ -360,29 +366,29 @@ class _IpodStageState extends State<IpodStage> with SingleTickerProviderStateMix
   Offset _drag = Offset.zero;
   double _drawerW = 300;
 
-  /// Part du tiroir qui reste engagée derrière l'iPod, ouvert.
+  /// Part du tiroir qui reste engagée derrière le baladeur, ouvert.
   static const double _tuck = 28;
 
   /// Au tout début de l'ouverture, son bord extérieur part de ce retrait
-  /// derrière le flanc de l'iPod : juste à la ligne où il devient visible,
+  /// derrière le flanc du baladeur : juste à la ligne où il devient visible,
   /// pour qu'il apparaisse dès la première image.
   static const double _hideBack = _tuck + 4;
 
   /// Course du tiroir, de rangé à ouvert.
   double get _travel => _drawerW - _tuck + _hideBack;
 
-  /// Un emplacement par famille, dans l'ordre de [ipodModels].
-  static final List<List<IpodModel>> _families = [
-    for (final f in {for (final m in ipodModels) m.family})
+  /// Un emplacement par famille, dans l'ordre de [deviceModels].
+  static final List<List<DeviceModel>> _families = [
+    for (final f in {for (final m in deviceModels) m.family})
       [
-        for (final m in ipodModels)
+        for (final m in deviceModels)
           if (m.family == f) m,
       ],
   ];
 
   /// Teinte montrée dans l'emplacement de chaque famille : la première ;
   /// celle de l'appareil en main reste la sienne.
-  late final Map<String, IpodModel> _shown = {
+  late final Map<String, DeviceModel> _shown = {
     for (final f in _families) f.first.family: f.first,
     _model.family: _model,
   };
@@ -391,7 +397,7 @@ class _IpodStageState extends State<IpodStage> with SingleTickerProviderStateMix
 
   _Swap _phase = _Swap.none;
   @override
-  IpodModel? _incoming;
+  DeviceModel? _incoming;
 
   /// Hauteur dont la prise est sortie, en unités de l'appareil (0 = enfoncée).
   final _plug = Spring(0, stiffness: 500, damping: 0.55);
@@ -443,7 +449,7 @@ class _IpodStageState extends State<IpodStage> with SingleTickerProviderStateMix
   final Map<String, GlobalKey> _deviceKeys = {};
   late final Map<String, GlobalKey> _slotKeys = {for (final f in _families) f.first.family: GlobalKey()};
 
-  GlobalKey _deviceKey(IpodModel m) => _deviceKeys.putIfAbsent(m.id, GlobalKey.new);
+  GlobalKey _deviceKey(DeviceModel m) => _deviceKeys.putIfAbsent(m.id, GlobalKey.new);
 
   @override
   void initState() {
@@ -451,22 +457,22 @@ class _IpodStageState extends State<IpodStage> with SingleTickerProviderStateMix
     widget.player.setForcedShuffle(_shuffles(_model));
     if (_win != null) WidgetsBinding.instance.addPostFrameCallback((_) => _takeWindow());
     _takeFullWindow();
-    ipodFree.addListener(_freeChanged);
+    deviceFree.addListener(_freeChanged);
     _focusWatch; // (créé maintenant : il n'écoute qu'une fois construit)
     // (En position libre, il arrive tout de suite là où on l'avait laissé.)
     _backX.value = _backRest.dx;
     _backY.value = _backRest.dy;
     if (_remember) {
-      // Au lancement, la prise vient se brancher, une fois l'iPod arrivé
+      // Au lancement, la prise vient se brancher, une fois le baladeur arrivé
       // (voir main.dart) ; l'écran s'allume au branchement.
       // (La cible aussi : la scène peut s'animer pendant la montée, souris
       // sur la fenêtre, et le ressort ramènerait sinon la prise jusqu'à la
       // prise femelle sans qu'on la voie, déjà branchée à l'arrivée.)
       _plug.value = _plugTarget = JackGeometry.away;
-      if (ipodLanded.value) {
+      if (deviceLanded.value) {
         _startPlugging();
       } else {
-        ipodLanded.addListener(_landed);
+        deviceLanded.addListener(_landed);
       }
     }
     if (Platform.environment['LECTEUR_BENCH'] != null) _bench();
@@ -474,21 +480,21 @@ class _IpodStageState extends State<IpodStage> with SingleTickerProviderStateMix
   }
 
   void _landed() {
-    if (!ipodLanded.value) return;
-    ipodLanded.removeListener(_landed);
+    if (!deviceLanded.value) return;
+    deviceLanded.removeListener(_landed);
     if (mounted) _startPlugging();
   }
 
-  static IpodModel _saved() {
+  static DeviceModel _saved() {
     final id = Settings.getString(_settingsKey);
     // Par défaut, le Classic.
-    return ipodModels.firstWhere((m) => m.id == id, orElse: () => const ClassicModel());
+    return deviceModels.firstWhere((m) => m.id == id, orElse: () => const ClassicModel());
   }
 
   @override
   void dispose() {
-    ipodLanded.removeListener(_landed);
-    ipodFree.removeListener(_freeChanged);
+    deviceLanded.removeListener(_landed);
+    deviceFree.removeListener(_freeChanged);
     _focusWatch.dispose();
     _liveTimer?.cancel();
     _dragSettle?.cancel();
@@ -514,6 +520,12 @@ class _IpodStageState extends State<IpodStage> with SingleTickerProviderStateMix
     _last = elapsed;
     if (!_dragging) {
       _open.step(_wantOpen ? 1 : 0, dt);
+      // L'élan du lâcher ne l'emmène pas plus loin que la butée.
+      final most = 1 + _stop / _travel;
+      if (_open.value > most) {
+        _open.value = most;
+        _open.velocity = math.min(_open.velocity, 0);
+      }
       _lift.step(0, dt);
       if (_open.isSettled) {
         _open.value = _wantOpen ? 1 : 0;
@@ -592,7 +604,7 @@ class _IpodStageState extends State<IpodStage> with SingleTickerProviderStateMix
     return MatrixUtils.transformRect(box.getTransformTo(stage), Offset.zero & box.size);
   }
 
-  void _startSwap(IpodModel to) {
+  void _startSwap(DeviceModel to) {
     _revealSlot(_model.family);
     _incoming = to;
     // La fenêtre fait la place aux deux, le temps de l'échange.
@@ -828,9 +840,9 @@ class _IpodStageState extends State<IpodStage> with SingleTickerProviderStateMix
     // Pendant le vol, la prise est partie hors de la fenêtre. On ne la dessine
     // pas : sa distance suit l'échelle de l'appareil, qui rétrécit en volant
     // vers le tiroir, et la ramènerait sinon au-dessus de lui.
-    // Au lancement, pas de prise tant que l'iPod monte : elle descendra
+    // Au lancement, pas de prise tant que le baladeur monte : elle descendra
     // une fois qu'il sera arrivé.
-    final flying = _phase == _Swap.stowing || _phase == _Swap.unstowing || !ipodLanded.value;
+    final flying = _phase == _Swap.stowing || _phase == _Swap.unstowing || !deviceLanded.value;
     if (flying || _hideDevice || box is! RenderBox || stage is! RenderBox || !box.hasSize) {
       return const JackPainter(socket: null, scale: 1, lift: 0, anchorX: 0, sway: 0);
     }
@@ -879,8 +891,9 @@ class _IpodStageState extends State<IpodStage> with SingleTickerProviderStateMix
     _drag += d.delta;
     // Tirer vers l'extérieur l'ouvre.
     final raw = _dragStart + _side * _drag.dx / _travel;
-    _open.value = raw <= 1 ? raw.clamp(0.0, 1.0) : 1 + rubberBand(raw - 1, 0.35);
-    _lift.value = rubberBand(_drag.dy, 12); // il bouge à peine en hauteur
+    // Au-delà de la sortie, même butée qu'en hauteur : il ne se décolle pas du baladeur.
+    _open.value = raw <= 1 ? raw.clamp(0.0, 1.0) : 1 + rubberBand((raw - 1) * _travel, _stop) / _travel;
+    _lift.value = rubberBand(_drag.dy, _stop); // il bouge à peine en hauteur
     setState(() {});
   }
 
@@ -952,17 +965,18 @@ class _IpodStageState extends State<IpodStage> with SingleTickerProviderStateMix
     if (next == _hoverSide) return;
     _hoverSide = next;
     // La souris approche d'une poignée : le tiroir se prépare tout de suite
-    // de ce côté (caché derrière l'iPod), pour que sa photo soit prête
+    // de ce côté (caché derrière le baladeur), pour que sa photo soit prête
     // avant le clic au lieu de coûter une image au début de l'ouverture.
     if (next != 0 && !_wantOpen && _open.value.abs() < 0.02) _side = next;
     _kick();
   }
 
-  void _choose(IpodModel m) {
+  void _choose(DeviceModel m) {
     // Le nouveau prend la place de l'ancien à l'écran, centré au même endroit.
     final anchor = _anchor;
     if (anchor != null) _anchor = Rect.fromCenter(center: anchor.center, width: m.size.width, height: m.size.height);
     _nav.fitLook(m.look);
+    _nav.coverPalette = m.coverPalette;
     _nav.coverColor = m.coverColor;
     widget.player.setForcedShuffle(_shuffles(m));
     if (m.size != _model.size && _geoShown != null) {
@@ -981,7 +995,7 @@ class _IpodStageState extends State<IpodStage> with SingleTickerProviderStateMix
 
   /// Clic sur un appareil du tiroir : on débranche celui en main, il se
   /// range, l'autre sort et se branche, puis le tiroir se referme.
-  void _pick(IpodModel m) {
+  void _pick(DeviceModel m) {
     if (_phase != _Swap.none || _swatchPending || m.id == _model.id) return;
     setState(() => _shown[m.family] = m);
     _startSwap(m);
@@ -995,7 +1009,7 @@ class _IpodStageState extends State<IpodStage> with SingleTickerProviderStateMix
   /// Sinon, chaque chose à son tour : l'appareil de l'emplacement prend la
   /// teinte, les autres teintes se rangent derrière lui, et seulement alors
   /// on débranche et on échange.
-  void _swatch(IpodModel m, Future<void> folded) {
+  void _swatch(DeviceModel m, Future<void> folded) {
     if (m.family == _model.family) {
       if (m.id == _model.id) return;
       WheelClick.instance.play();
@@ -1072,7 +1086,7 @@ class _IpodStageState extends State<IpodStage> with SingleTickerProviderStateMix
               onPanUpdate: _dragUpdate,
               onPanEnd: _dragEnd,
               child: RepaintBoundary(
-                child: IpodDrawer(
+                child: DeviceDrawer(
           families: _families,
           current: _model,
           shown: Map.of(_shown),
@@ -1176,7 +1190,7 @@ class _IpodStageState extends State<IpodStage> with SingleTickerProviderStateMix
 
   /// Hauteur gardée pour le câble. En plein écran (Windows) elle est
   /// plafonnée : sur un portable (écran mis à l'échelle, peu de hauteur),
-  /// l'iPod garde ainsi presque toute sa taille.
+  /// le baladeur garde ainsi presque toute sa taille.
   double _cableRoom(double h) => _full != null ? math.min(h * 0.2, 110) : h * 0.2;
 
   /// Poignée cachée derrière un coin du haut de l'appareil [dev] : quand la
@@ -1230,7 +1244,7 @@ class _IpodStageState extends State<IpodStage> with SingleTickerProviderStateMix
   }
 
   /// Bouton de déplacement, juste sous la poignée du tiroir, du même métal :
-  /// une flèche à la place de l'encoche. Cliqué, l'iPod va d'un cran de ce
+  /// une flèche à la place de l'encoche. Cliqué, le baladeur va d'un cran de ce
   /// côté de la fenêtre.
   Widget _moveHandle(int side, Rect dev, double corner, double openC) {
     final peek = (side < 0 ? _movePeekL : _movePeekR).value;
@@ -1278,7 +1292,7 @@ class _IpodStageState extends State<IpodStage> with SingleTickerProviderStateMix
   /// Sur la façade de l'appareil (qui est dessiné par-dessus les poignées),
   /// le prolongement de leurs zones sensibles vers l'intérieur, jusqu'à mordre
   /// un peu sur l'écran : la souris qui y passe fait sortir les poignées de
-  /// ce coin. Survol seulement, les clics vont toujours à l'iPod.
+  /// ce coin. Survol seulement, les clics vont toujours au baladeur.
   List<Widget> _hoverInside(int side, Rect dev, double corner, double openC) {
     const inside = 72.0;
     final top = dev.top + corner + 10;
@@ -1337,7 +1351,7 @@ class _IpodStageState extends State<IpodStage> with SingleTickerProviderStateMix
                   child: ConstrainedBox(
                     constraints: BoxConstraints.loose(_model.size * _homeFit),
                     child: FittedBox(
-                    child: IpodDevice(
+                    child: DeviceBody(
                         key: _deviceKey(_model),
                         model: _model,
                         player: widget.player,
@@ -1395,7 +1409,7 @@ class _IpodStageState extends State<IpodStage> with SingleTickerProviderStateMix
             gap = held - (_origin + dev.center);
           } else if (dropped != null && window != null && (w - window.width).abs() < 2 && (h - window.height).abs() < 2) {
             gap = dropped - (window.topLeft + dev.center);
-            if (ipodFree.value && _dragsInside) {
+            if (deviceFree.value && _dragsInside) {
               // Position libre : il reste là (ramené dans la fenêtre s'il en dépassait).
               _freeAt = _keepInside(gap, dev, w, h);
               if (_remember) Settings.setString(_freeKey, '${_freeAt.dx.round()},${_freeAt.dy.round()}');
@@ -1417,7 +1431,7 @@ class _IpodStageState extends State<IpodStage> with SingleTickerProviderStateMix
           // (Tiroir rentré seulement : sorti, l'appareil n'est pas mis en page à sa place.)
           if (held == null && !_wantOpen && open == 0) _freeAt = _keepInside(_freeAt, dev, w, h);
           // (Position libre : il ne s'écarte pas non plus pour le tiroir, qui sort d'à côté de lui.)
-          final stay = ipodFree.value && _dragsInside ? Offset(-_deviceShift, 0) : Offset.zero;
+          final stay = deviceFree.value && _dragsInside ? Offset(-_deviceShift, 0) : Offset.zero;
           final back = Offset(_backX.value, _backY.value) + stay;
           _deviceShown = dev.shift(back);
           // L'appareil, lui, est déjà mis en page à sa nouvelle place.
@@ -1436,7 +1450,7 @@ class _IpodStageState extends State<IpodStage> with SingleTickerProviderStateMix
           if (!_wantOpen) {
             _drawerNudge = 0;
           } else if (open > 0) {
-            // (Mesuré là où l'iPod va se poser, pas là où il est en chemin : sinon on corrigerait deux fois.)
+            // (Mesuré là où le baladeur va se poser, pas là où il est en chemin : sinon on corrigerait deux fois.)
             final rest = _backRest.dx + stay.dx;
             final over = drawerAt.right + rest - (w - 8), under = 8 - (drawerAt.left + rest);
             if (over > 0) {
@@ -1447,11 +1461,11 @@ class _IpodStageState extends State<IpodStage> with SingleTickerProviderStateMix
           }
           final drawerRect = drawerAt.shift(
             // Rangé, il attend hors de la fenêtre, sa photo prête : rien de
-            // lui (pas même son ombre) ne dépasse de derrière l'iPod.
+            // lui (pas même son ombre) ne dépasse de derrière le baladeur.
             open == 0 ? Offset(right ? w + 2 * _shadowPad - (outer - drawerW) : -(outer + 2 * _shadowPad + drawerW), 0) : Offset.zero,
           );
 
-          // Plein écran (Windows) : la fenêtre se découpe autour de l'iPod,
+          // Plein écran (Windows) : la fenêtre se découpe autour du baladeur,
           // pour laisser les clics du bureau passer à côté. Quand on le
           // tient, la découpe le suit au lieu de s'ouvrir en grand : agrandir
           // d'un coup la découpe à tout l'écran laisse voir, le temps d'une
@@ -1468,7 +1482,7 @@ class _IpodStageState extends State<IpodStage> with SingleTickerProviderStateMix
                 _phase != _Swap.none ||
                 _geoFrom != null ||
                 !_place.isSettled ||
-                !ipodLanded.value,
+                !deviceLanded.value,
           );
 
           if (_hideDevice) device = Opacity(opacity: 0, child: device);
@@ -1495,7 +1509,7 @@ class _IpodStageState extends State<IpodStage> with SingleTickerProviderStateMix
                 ),
                 // Les deux poignées, derrière les coins du haut.
                 for (final side in const [-1, 1]) _handle(side, dev, g.cornerRadius * scale, openC),
-                // Et sous chacune, le bouton qui décale l'iPod de ce côté.
+                // Et sous chacune, le bouton qui décale le baladeur de ce côté.
                 for (final side in const [-1, 1]) _moveHandle(side, dev, g.cornerRadius * scale, openC),
                 // Le tiroir, derrière l'appareil, d'où il émerge. Coupé au
                 // flanc opposé : au début de l'ouverture, son autre bout ne

@@ -22,7 +22,7 @@ void main() {
   test('joindre et normaliser (listes .m3u qui mélangent / et \\)', () {
     expect(joinPath('/home/paul', 'Music', windows: false), '/home/paul/Music');
     expect(joinPath('/', 'mnt', windows: false), '/mnt');
-    expect(joinPath(r'C:\Users\Paul', 'Music/Musique Ipod', windows: true), r'C:\Users\Paul\Music\Musique Ipod');
+    expect(joinPath(r'C:\Users\Paul', 'Music/Ma musique', windows: true), r'C:\Users\Paul\Music\Ma musique');
     expect(joinPath(r'C:\', 'Musique', windows: true), r'C:\Musique');
     expect(normalizePath('C:/Musique/a.mp3', windows: true), r'C:\Musique\a.mp3');
     expect(normalizePath('/musique/a.mp3', windows: false), '/musique/a.mp3');

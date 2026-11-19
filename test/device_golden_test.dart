@@ -1,7 +1,7 @@
 // Captures de référence du baladeur. Elles verrouillent l'apparence
 // du Classic : toute modification qui change un seul pixel fait échouer le
 // test. Pour accepter volontairement un changement :
-//   flutter test --update-goldens test/ipod_golden_test.dart
+//   flutter test --update-goldens test/device_golden_test.dart
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -11,15 +11,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lecteur/core/library.dart';
 import 'package:lecteur/core/player.dart';
-import 'package:lecteur/ipod/classic.dart';
-import 'package:lecteur/ipod/drawer.dart';
-import 'package:lecteur/ipod/ipod.dart';
-import 'package:lecteur/ipod/mini.dart';
-import 'package:lecteur/ipod/model.dart';
-import 'package:lecteur/ipod/nano.dart';
-import 'package:lecteur/ipod/nanos.dart';
-import 'package:lecteur/ipod/shuffle.dart';
-import 'package:lecteur/ipod/vintage.dart';
+import 'package:lecteur/device/classic.dart';
+import 'package:lecteur/device/drawer.dart';
+import 'package:lecteur/device/device.dart';
+import 'package:lecteur/device/mini.dart';
+import 'package:lecteur/device/model.dart';
+import 'package:lecteur/device/nano.dart';
+import 'package:lecteur/device/nanos.dart';
+import 'package:lecteur/device/shuffle.dart';
+import 'package:lecteur/device/vintage.dart';
 
 Future<void> _loadFont(String family, List<String> files) async {
   final loader = FontLoader(family);
@@ -53,7 +53,7 @@ PlayerController _player({int index = -1, bool playing = false, Duration positio
     position: position,
     // Le dossier affiché dans Réglages › Bibliothèque : le même partout, pas
     // celui de la machine qui lance les tests.
-  )..musicDir = '/x/Musique Ipod';
+  )..musicDir = '/x/Ma musique';
 }
 
 Future<void> _show(WidgetTester tester, Widget stage, {Size size = const Size(460, 760)}) async {
@@ -163,12 +163,12 @@ void main() {
     const model = ClassicModel();
 
     testWidgets('menu principal', (tester) async {
-      await _show(tester, IpodStage(player: _player(index: 0), initial: model));
+      await _show(tester, DeviceStage(player: _player(index: 0), initial: model));
       await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/classic_menu.png'));
     });
 
     testWidgets('liste longue, titre défilant', (tester) async {
-      await _show(tester, IpodStage(player: _player(index: 0), initial: model));
+      await _show(tester, DeviceStage(player: _player(index: 0), initial: model));
       await _key(tester, LogicalKeyboardKey.enter); // Musique
       await _key(tester, LogicalKeyboardKey.arrowDown, 4);
       await _key(tester, LogicalKeyboardKey.enter); // Morceaux
@@ -177,7 +177,7 @@ void main() {
     });
 
     testWidgets('en lecture', (tester) async {
-      await _show(tester, IpodStage(player: _player(index: 5, playing: false, position: const Duration(minutes: 1, seconds: 23)), initial: model));
+      await _show(tester, DeviceStage(player: _player(index: 5, playing: false, position: const Duration(minutes: 1, seconds: 23)), initial: model));
       await _key(tester, LogicalKeyboardKey.arrowDown, 3);
       await _key(tester, LogicalKeyboardKey.enter); // En lecture
       await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/classic_now_playing.png'));
@@ -188,7 +188,7 @@ void main() {
     });
 
     testWidgets('albums : vignette et artiste', (tester) async {
-      await _show(tester, IpodStage(player: _player(index: 0), initial: model));
+      await _show(tester, DeviceStage(player: _player(index: 0), initial: model));
       await _key(tester, LogicalKeyboardKey.enter); // Musique
       await _key(tester, LogicalKeyboardKey.arrowDown, 3);
       await _key(tester, LogicalKeyboardKey.enter); // Albums
@@ -197,7 +197,7 @@ void main() {
     });
 
     testWidgets('recherche', (tester) async {
-      await _show(tester, IpodStage(player: _player(index: 0), initial: model));
+      await _show(tester, DeviceStage(player: _player(index: 0), initial: model));
       await _key(tester, LogicalKeyboardKey.enter); // Musique
       await _key(tester, LogicalKeyboardKey.arrowDown, 9); // tout en bas
       await _key(tester, LogicalKeyboardKey.enter); // Recherche
@@ -207,7 +207,7 @@ void main() {
     });
 
     testWidgets('en lecture : étoiles, puis aléatoire', (tester) async {
-      await _show(tester, IpodStage(player: _player(index: 5, position: const Duration(minutes: 1, seconds: 23)), initial: model));
+      await _show(tester, DeviceStage(player: _player(index: 5, position: const Duration(minutes: 1, seconds: 23)), initial: model));
       await _key(tester, LogicalKeyboardKey.arrowDown, 3);
       await _key(tester, LogicalKeyboardKey.enter); // En lecture
       await _key(tester, LogicalKeyboardKey.enter); // recherche dans le morceau
@@ -220,7 +220,7 @@ void main() {
     });
 
     testWidgets('verrou : cadenas, et plus rien ne répond', (tester) async {
-      await _show(tester, IpodStage(player: _player(index: 0), initial: model));
+      await _show(tester, DeviceStage(player: _player(index: 0), initial: model));
       await tester.tap(find.byKey(const ValueKey('hold')));
       await _frames(tester);
       await _key(tester, LogicalKeyboardKey.arrowDown, 2); // sans effet
@@ -231,9 +231,9 @@ void main() {
     });
 
     testWidgets('bouton enfoncé', (tester) async {
-      await _show(tester, IpodStage(player: _player(index: 0), initial: model));
-      final wheel = tester.getCenter(find.byType(IpodWheel));
-      final scale = tester.getSize(find.byType(IpodWheel)).width / 264;
+      await _show(tester, DeviceStage(player: _player(index: 0), initial: model));
+      final wheel = tester.getCenter(find.byType(DeviceWheel));
+      final scale = tester.getSize(find.byType(DeviceWheel)).width / 264;
       final g = await tester.startGesture(wheel + Offset(100 * scale, 0));
       await tester.pump(const Duration(milliseconds: 50));
       await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/classic_pressed.png'));
@@ -245,7 +245,7 @@ void main() {
   group('Mini', () {
     for (final color in MiniColor.values) {
       testWidgets('menu principal (${color.name})', (tester) async {
-        await _show(tester, IpodStage(player: _player(index: 0), initial: MiniModel(color)));
+        await _show(tester, DeviceStage(player: _player(index: 0), initial: MiniModel(color)));
         await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/mini_${color.name}_menu.png'));
       });
     }
@@ -253,7 +253,7 @@ void main() {
     const model = MiniModel();
 
     testWidgets('liste longue, titre défilant', (tester) async {
-      await _show(tester, IpodStage(player: _player(index: 0), initial: model));
+      await _show(tester, DeviceStage(player: _player(index: 0), initial: model));
       await _key(tester, LogicalKeyboardKey.enter); // Musique
       await _key(tester, LogicalKeyboardKey.arrowDown, 3);
       await _key(tester, LogicalKeyboardKey.enter); // Morceaux
@@ -262,7 +262,7 @@ void main() {
     });
 
     testWidgets('en lecture', (tester) async {
-      await _show(tester, IpodStage(player: _player(index: 5, position: const Duration(minutes: 1, seconds: 23)), initial: model));
+      await _show(tester, DeviceStage(player: _player(index: 5, position: const Duration(minutes: 1, seconds: 23)), initial: model));
       await _key(tester, LogicalKeyboardKey.arrowDown, 4); // (après « Rétroéclairage »)
       await _key(tester, LogicalKeyboardKey.enter); // En lecture
       await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/mini_now_playing.png'));
@@ -273,7 +273,7 @@ void main() {
 
   group('Réglages, Cover Flow, rétroéclairage', () {
     testWidgets('Réglages (Classic)', (tester) async {
-      await _show(tester, IpodStage(player: _player(index: 0), initial: const ClassicModel()));
+      await _show(tester, DeviceStage(player: _player(index: 0), initial: const ClassicModel()));
       await _key(tester, LogicalKeyboardKey.arrowDown);
       await _key(tester, LogicalKeyboardKey.enter); // Réglages
       await _key(tester, LogicalKeyboardKey.arrowDown, 3);
@@ -282,7 +282,7 @@ void main() {
     });
 
     testWidgets('recherche (Mini)', (tester) async {
-      await _show(tester, IpodStage(player: _player(index: 0), initial: const MiniModel()));
+      await _show(tester, DeviceStage(player: _player(index: 0), initial: const MiniModel()));
       await _key(tester, LogicalKeyboardKey.enter); // Musique
       await _key(tester, LogicalKeyboardKey.arrowDown, 9);
       await _key(tester, LogicalKeyboardKey.enter); // Recherche
@@ -294,7 +294,7 @@ void main() {
     testWidgets('pochette en grand (5e génération)', (tester) async {
       await _show(
         tester,
-        IpodStage(player: _player(index: 5, position: const Duration(minutes: 1, seconds: 23)), initial: const VideoModel()),
+        DeviceStage(player: _player(index: 5, position: const Duration(minutes: 1, seconds: 23)), initial: const VideoModel()),
       );
       await _key(tester, LogicalKeyboardKey.arrowDown, 3);
       await _key(tester, LogicalKeyboardKey.enter); // En lecture
@@ -305,7 +305,7 @@ void main() {
 
     testWidgets('shuffle : l\'interrupteur passe de l\'aléatoire à l\'ordre', (tester) async {
       final player = _player(index: 0);
-      await _show(tester, IpodStage(player: player, initial: Shuffle2Model(shuffle2Colors.first)));
+      await _show(tester, DeviceStage(player: player, initial: Shuffle2Model(shuffle2Colors.first)));
       expect(player.forcedShuffle, isTrue);
       await tester.tap(find.byKey(const ValueKey('hold')));
       await _frames(tester);
@@ -316,7 +316,7 @@ void main() {
     });
 
     testWidgets('Réglages (Mini)', (tester) async {
-      await _show(tester, IpodStage(player: _player(index: 0), initial: const MiniModel()));
+      await _show(tester, DeviceStage(player: _player(index: 0), initial: const MiniModel()));
       await _key(tester, LogicalKeyboardKey.arrowDown);
       await _key(tester, LogicalKeyboardKey.enter); // Réglages
       await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/mini_settings.png'));
@@ -324,7 +324,7 @@ void main() {
 
     testWidgets('Cover Flow (Classic)', (tester) async {
       final player = await _coverPlayer(tester);
-      await _show(tester, IpodStage(player: player, initial: const ClassicModel()));
+      await _show(tester, DeviceStage(player: player, initial: const ClassicModel()));
       await _key(tester, LogicalKeyboardKey.enter); // Musique
       await _key(tester, LogicalKeyboardKey.enter); // Cover Flow
       await _decode(tester);
@@ -334,9 +334,16 @@ void main() {
       await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/classic_coverflow_moving.png'));
     });
 
+    testWidgets('bande de pochettes (nano 5G)', (tester) async {
+      final player = await _coverPlayer(tester);
+      await _show(tester, DeviceStage(player: player, initial: Nano5Model(nano5Colors.first)));
+      await _decode(tester);
+      await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/nano5_strip.png'));
+    });
+
     testWidgets('Listes de lecture en Cover Flow (Classic)', (tester) async {
       final player = await _coverPlayer(tester);
-      await _show(tester, IpodStage(player: player, initial: const ClassicModel()));
+      await _show(tester, DeviceStage(player: player, initial: const ClassicModel()));
       await _key(tester, LogicalKeyboardKey.enter); // Musique
       await _key(tester, LogicalKeyboardKey.arrowDown);
       await _key(tester, LogicalKeyboardKey.enter); // Listes de lecture
@@ -349,7 +356,7 @@ void main() {
     });
 
     testWidgets('Fenêtre sans le clavier : le voyant de la prise est éteint (Classic)', (tester) async {
-      await _show(tester, IpodStage(player: _player(index: 0), initial: const ClassicModel()));
+      await _show(tester, DeviceStage(player: _player(index: 0), initial: const ClassicModel()));
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
       addTearDown(() => tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed));
       await _frames(tester);
@@ -358,7 +365,7 @@ void main() {
 
     testWidgets('Cover Flow retourné (Classic)', (tester) async {
       final player = await _coverPlayer(tester);
-      await _show(tester, IpodStage(player: player, initial: const ClassicModel()));
+      await _show(tester, DeviceStage(player: player, initial: const ClassicModel()));
       await _key(tester, LogicalKeyboardKey.enter); // Musique
       await _key(tester, LogicalKeyboardKey.enter); // Cover Flow
       await _decode(tester);
@@ -372,7 +379,7 @@ void main() {
 
     testWidgets('Cover Flow retourné (nano 4G)', (tester) async {
       final player = await _coverPlayer(tester);
-      await _show(tester, IpodStage(player: player, initial: Nano4Model(nano4Colors[3])));
+      await _show(tester, DeviceStage(player: player, initial: Nano4Model(nano4Colors[3])));
       await _key(tester, LogicalKeyboardKey.enter); // Musique
       await _key(tester, LogicalKeyboardKey.enter); // Cover Flow
       await _decode(tester);
@@ -382,7 +389,7 @@ void main() {
 
     testWidgets('Cover Flow (nano 4G, écran vertical)', (tester) async {
       final player = await _coverPlayer(tester);
-      await _show(tester, IpodStage(player: player, initial: Nano4Model(nano4Colors[3])));
+      await _show(tester, DeviceStage(player: player, initial: Nano4Model(nano4Colors[3])));
       await _key(tester, LogicalKeyboardKey.enter); // Musique
       await _key(tester, LogicalKeyboardKey.enter); // Cover Flow
       await _decode(tester);
@@ -390,7 +397,7 @@ void main() {
     });
 
     testWidgets('écran éteint après 10 s', (tester) async {
-      await _show(tester, IpodStage(player: _player(index: 0), initial: const ClassicModel()));
+      await _show(tester, DeviceStage(player: _player(index: 0), initial: const ClassicModel()));
       await tester.pump(const Duration(seconds: 11));
       await _frames(tester);
       await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/classic_backlight_off.png'));
@@ -401,30 +408,30 @@ void main() {
 
   group('Tiroir', () {
     testWidgets('ouvert (touche T), Mini rose en main', (tester) async {
-      await _show(tester, IpodStage(player: _player(index: 0), initial: const MiniModel(MiniColor.rose)));
+      await _show(tester, DeviceStage(player: _player(index: 0), initial: const MiniModel(MiniColor.rose)));
       await _key(tester, LogicalKeyboardKey.keyT);
       await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/drawer_open.png'));
       await _key(tester, LogicalKeyboardKey.escape);
     });
 
     testWidgets('ouvert, Classic en main : le Mini et ses teintes', (tester) async {
-      await _show(tester, IpodStage(player: _player(index: 0), initial: const ClassicModel()));
+      await _show(tester, DeviceStage(player: _player(index: 0), initial: const ClassicModel()));
       await _key(tester, LogicalKeyboardKey.keyT);
       await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/drawer_open_classic.png'));
       await _key(tester, LogicalKeyboardKey.escape);
     });
 
     testWidgets('ouvert à gauche (nano 4G en main)', (tester) async {
-      await _show(tester, IpodStage(player: _player(index: 0), initial: Nano4Model(nano4Colors[4])));
-      final d = tester.getRect(find.byType(IpodDevice));
+      await _show(tester, DeviceStage(player: _player(index: 0), initial: Nano4Model(nano4Colors[4])));
+      final d = tester.getRect(find.byType(DeviceBody));
       await tester.tapAt(Offset(d.left - 6, d.top + 30));
       await _frames(tester, 120);
       await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/drawer_open_left.png'));
     });
 
     testWidgets('ouvert à gauche après avoir été ouvert à droite : façade à gauche', (tester) async {
-      await _show(tester, IpodStage(player: _player(index: 0), initial: Nano4Model(nano4Colors[4])));
-      final d = tester.getRect(find.byType(IpodDevice));
+      await _show(tester, DeviceStage(player: _player(index: 0), initial: Nano4Model(nano4Colors[4])));
+      final d = tester.getRect(find.byType(DeviceBody));
       await tester.tapAt(Offset(d.right + 6, d.top + 30));
       await _frames(tester, 120);
       await _key(tester, LogicalKeyboardKey.escape);
@@ -435,8 +442,8 @@ void main() {
     });
 
     testWidgets('poignée survolée', (tester) async {
-      await _show(tester, IpodStage(player: _player(index: 0), initial: const MiniModel(MiniColor.bleu)));
-      final d = tester.getRect(find.byType(IpodDevice));
+      await _show(tester, DeviceStage(player: _player(index: 0), initial: const MiniModel(MiniColor.bleu)));
+      final d = tester.getRect(find.byType(DeviceBody));
       final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
       addTearDown(mouse.removePointer);
       await mouse.addPointer(location: Offset.zero);
@@ -448,12 +455,12 @@ void main() {
     // Survol : l'éventail des teintes du nano 4G s'ouvre, la carte survolée
     // monte.
     testWidgets('survol d\'une pastille', (tester) async {
-      await _show(tester, IpodStage(player: _player(index: 0), initial: const ClassicModel()));
+      await _show(tester, DeviceStage(player: _player(index: 0), initial: const ClassicModel()));
       await _key(tester, LogicalKeyboardKey.keyT);
       final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
       addTearDown(mouse.removePointer);
       await mouse.addPointer(location: Offset.zero);
-      final nano4 = find.byWidgetPredicate((w) => w is IpodPreview && w.model.family == 'nano4');
+      final nano4 = find.byWidgetPredicate((w) => w is DevicePreview && w.model.family == 'nano4');
       await tester.ensureVisible(nano4); // le tiroir défile jusqu'à lui
       await _frames(tester);
       await mouse.moveTo(tester.getCenter(nano4));
@@ -469,7 +476,7 @@ void main() {
     // Fenêtre basse : les emplacements s'étalent sur plus de colonnes au
     // lieu de rapetisser.
     testWidgets('fenêtre large et basse', (tester) async {
-      await _show(tester, IpodStage(player: _player(index: 0), initial: const ClassicModel()), size: const Size(1100, 420));
+      await _show(tester, DeviceStage(player: _player(index: 0), initial: const ClassicModel()), size: const Size(1100, 420));
       await _key(tester, LogicalKeyboardKey.keyT);
       await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/drawer_low_window.png'));
       await _key(tester, LogicalKeyboardKey.escape);
@@ -478,7 +485,7 @@ void main() {
     // Fenêtre minuscule : les appareils gardent une taille où on les vise,
     // et les emplacements défilent.
     testWidgets('fenêtre minuscule', (tester) async {
-      await _show(tester, IpodStage(player: _player(index: 0), initial: const ClassicModel()), size: const Size(520, 300));
+      await _show(tester, DeviceStage(player: _player(index: 0), initial: const ClassicModel()), size: const Size(520, 300));
       await _key(tester, LogicalKeyboardKey.keyT);
       await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/drawer_tiny_window.png'));
       await _key(tester, LogicalKeyboardKey.escape);
@@ -486,7 +493,7 @@ void main() {
   });
 
   group('Autres modèles', () {
-    final models = <String, IpodModel>{
+    final models = <String, DeviceModel>{
       'classic_noir': const ClassicModel(ClassicColor.noir),
       for (final c in NanoColor.values) 'nano_${c.name}': NanoModel(c),
       'gen3': const ThirdGenModel(),
@@ -507,7 +514,7 @@ void main() {
     };
     for (final MapEntry(key: name, value: model) in models.entries) {
       testWidgets('menu ($name)', (tester) async {
-        await _show(tester, IpodStage(player: _player(index: 0), initial: model));
+        await _show(tester, DeviceStage(player: _player(index: 0), initial: model));
         await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/${name}_menu.png'));
       });
     }
@@ -525,7 +532,7 @@ void main() {
       testWidgets('en lecture ($name)', (tester) async {
         await _show(
           tester,
-          IpodStage(player: _player(index: 5, position: const Duration(minutes: 1, seconds: 23)), initial: model),
+          DeviceStage(player: _player(index: 5, position: const Duration(minutes: 1, seconds: 23)), initial: model),
         );
         // (Les écrans monochromes ont « Rétroéclairage » avant « En lecture ».)
         // (Une ligne de plus avant « En lecture » : Rétroéclairage, ou Couleur au hasard.)

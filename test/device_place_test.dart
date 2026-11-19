@@ -2,10 +2,10 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lecteur/core/player.dart';
-import 'package:lecteur/ipod/classic.dart';
-import 'package:lecteur/ipod/ipod.dart';
+import 'package:lecteur/device/classic.dart';
+import 'package:lecteur/device/device.dart';
 
-/// Une fenêtre bien plus large que l'iPod : de la place sur les côtés.
+/// Une fenêtre bien plus large que le baladeur : de la place sur les côtés.
 const _window = Size(1000, 700);
 
 Future<void> _show(WidgetTester tester) async {
@@ -17,7 +17,7 @@ Future<void> _show(WidgetTester tester) async {
     MaterialApp(
       home: Material(
         type: MaterialType.transparency,
-        child: IpodStage(player: PlayerController.preview(), initial: const ClassicModel()),
+        child: DeviceStage(player: PlayerController.preview(), initial: const ClassicModel()),
       ),
     ),
   );
@@ -30,7 +30,7 @@ Future<void> _settle(WidgetTester tester) async {
   }
 }
 
-Rect _device(WidgetTester tester) => tester.getRect(find.byType(IpodDevice));
+Rect _device(WidgetTester tester) => tester.getRect(find.byType(DeviceBody));
 
 /// Un point dans la zone du bouton de déplacement de ce côté (juste hors
 /// du flanc, sous la poignée du tiroir).
@@ -51,7 +51,7 @@ Future<void> _click(WidgetTester tester, TestGesture mouse, Offset at) async {
 }
 
 void main() {
-  testWidgets('les boutons sous les poignées décalent l\'iPod d\'un cran', (tester) async {
+  testWidgets('les boutons sous les poignées décalent l\'baladeur d\'un cran', (tester) async {
     await _show(tester);
     final centered = _device(tester);
     expect(centered.center.dx, closeTo(_window.width / 2, 1));
@@ -81,7 +81,7 @@ void main() {
     expect(_device(tester).center.dx, closeTo(_window.width / 2, 1));
   });
 
-  testWidgets('cliquer ailleurs à côté de l\'iPod ne le déplace pas', (tester) async {
+  testWidgets('cliquer ailleurs à côté de l\'baladeur ne le déplace pas', (tester) async {
     await _show(tester);
     final before = _device(tester);
     final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);

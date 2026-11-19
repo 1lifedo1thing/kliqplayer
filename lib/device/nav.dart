@@ -18,7 +18,7 @@ import '../physics.dart';
 import 'click.dart';
 import 'look.dart';
 
-sealed class IpodPage {
+sealed class DevicePage {
   String get title;
 }
 
@@ -28,9 +28,9 @@ sealed class IpodPage {
 /// Windows) ; la scène l'applique.
 final windowOnTop = ValueNotifier(Settings.getString('window.top') == 'on');
 
-/// L'iPod reste là où on le lâche à l'écran, au lieu de revenir à sa place
+/// Le baladeur reste là où on le lâche à l'écran, au lieu de revenir à sa place
 /// à gauche, au milieu ou à droite (Réglages › Position, sous Windows).
-final ipodFree = ValueNotifier(Settings.getString('window.free') == 'on');
+final deviceFree = ValueNotifier(Settings.getString('window.free') == 'on');
 
 enum MenuPreview { covers, settings, nowPlaying }
 
@@ -63,13 +63,13 @@ class MenuEntry {
   final bool Function()? checked;
 
   /// Ouvre un sous-menu (affiche un chevron).
-  final IpodPage Function()? open;
+  final DevicePage Function()? open;
 
   /// Action immédiate (lancer un morceau…).
   final VoidCallback? action;
 }
 
-class MenuPage extends IpodPage {
+class MenuPage extends DevicePage {
   MenuPage(this.title, List<MenuEntry> Function() builder,
       {this.live = false, this.music = false, this.welcome = false, this.kind = MenuKind.normal})
       : _builder = builder;
@@ -113,7 +113,7 @@ class MenuPage extends IpodPage {
 /// Les pochettes des albums en enfilade : celle du milieu de face, les
 /// autres de biais de chaque côté (Classic, nano 3G et 4G). Ou, avec
 /// [lists], celles des listes de lecture (Musique › Listes de lecture).
-class CoverFlowPage extends IpodPage {
+class CoverFlowPage extends DevicePage {
   CoverFlowPage(this.selected, {this.lists}) : pos = Spring(selected.toDouble(), stiffness: 210, damping: 0.92);
 
   /// Les listes de lecture montrées à la place des albums.
@@ -238,7 +238,7 @@ enum NowPlayingMode { progress, volume, scrub, rating, art, shuffle }
 /// La recherche (Musique › Recherche) : une réglette de lettres parcourue
 /// à la molette, le bouton central ajoute la lettre ; les morceaux trouvés
 /// s'affichent au-dessus, « OK » ouvre leur liste.
-class SearchPage extends IpodPage {
+class SearchPage extends DevicePage {
   @override
   String get title => tr('Recherche');
 
@@ -281,16 +281,16 @@ class KeyLayout {
   static const hjkl = KeyLayout('hjkl', 'H J K L', up: LogicalKeyboardKey.keyK, down: LogicalKeyboardKey.keyJ, enter: LogicalKeyboardKey.keyL, back: LogicalKeyboardKey.keyH);
   static const presets = [wasd, zqsd, hjkl];
 
-  /// Nom gardé dans les préférences (« custom » : les touches sont à côté, dans ipod.customKeys).
+  /// Nom gardé dans les préférences (« custom » : les touches sont à côté, dans device.customKeys).
   final String name;
   final String label;
   final LogicalKeyboardKey up, down, enter, back;
 
   /// Les touches gardées dans les préférences ; H J K L sinon.
   static KeyLayout load() {
-    final name = Settings.getString('ipod.keys');
+    final name = Settings.getString('device.keys');
     if (name == 'custom') {
-      final ids = [for (final s in (Settings.getString('ipod.customKeys') ?? '').split(',')) int.tryParse(s)];
+      final ids = [for (final s in (Settings.getString('device.customKeys') ?? '').split(',')) int.tryParse(s)];
       if (ids.length == 4 && !ids.contains(null)) {
         return KeyLayout.custom([for (final id in ids) LogicalKeyboardKey.findKeyByKeyId(id!) ?? LogicalKeyboardKey(id)]);
       }
@@ -299,22 +299,22 @@ class KeyLayout {
   }
 }
 
-class NowPlayingPage extends IpodPage {
+class NowPlayingPage extends DevicePage {
   @override
   String get title => tr('En lecture');
 }
 
 /// Navigation dans les menus, pilotée par la molette et le clavier.
 /// L'écran ne fait que dessiner cet état en l'animant.
-class IpodNav extends ChangeNotifier {
-  IpodNav(this.player, {required this.look, bool? welcome}) : coverFlow = look.coverFlow {
+class DeviceNav extends ChangeNotifier {
+  DeviceNav(this.player, {required this.look, bool? welcome}) : coverFlow = look.coverFlow {
     // Premier lancement : la langue, puis les touches, avant le menu principal.
     stack = [welcome ?? (!JsonStore.inTest && Settings.getString('welcome') == null) ? _welcome() : _root()];
-    backlight = int.tryParse(Settings.getString('ipod.backlight') ?? '') ?? 10;
+    backlight = int.tryParse(Settings.getString('device.backlight') ?? '') ?? 10;
     keys = KeyLayout.load();
-    WheelClick.instance.enabled = Settings.getString('ipod.clicker') != 'off';
+    WheelClick.instance.enabled = Settings.getString('device.clicker') != 'off';
     WheelClick.instance.pitch =
-        (int.tryParse(Settings.getString('ipod.clickPitch') ?? '') ?? 2).clamp(0, WheelClick.pitches.length - 1);
+        (int.tryParse(Settings.getString('device.clickPitch') ?? '') ?? 2).clamp(0, WheelClick.pitches.length - 1);
     _libraryVersion = player.libraryVersion;
     player.addListener(_onPlayer);
   }
@@ -419,12 +419,12 @@ class IpodNav extends ChangeNotifier {
     }
     notifyListeners();
   }
-  late final List<IpodPage> stack;
+  late final List<DevicePage> stack;
 
-  IpodPage get page => stack.last;
+  DevicePage get page => stack.last;
 
   /// Page qui sort pendant une transition, et sens (+1 entrée, -1 retour).
-  IpodPage? leaving;
+  DevicePage? leaving;
   int direction = 1;
   int transition = 0;
 
@@ -608,7 +608,7 @@ class IpodNav extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _push(IpodPage p) {
+  void _push(DevicePage p) {
     leaving = page;
     stack.add(p);
     direction = 1;
@@ -620,8 +620,11 @@ class IpodNav extends ChangeNotifier {
 
   void transitionDone() => leaving = null;
 
-  /// Teinte de l'iPod en main, s'il a Couleur au hasard (nano 4G et 5G).
+  /// Teinte du baladeur en main, s'il a Couleur au hasard (nano 4G et 5G).
   Color? get coverColor => _coverColor;
+
+  /// Toutes les teintes du modèle en main (voir DeviceModel.coverPalette).
+  List<Color> coverPalette = const [];
   Color? _coverColor;
 
   /// En pleine Couleur au hasard, une autre teinte : la suite de la file
@@ -640,7 +643,7 @@ class IpodNav extends ChangeNotifier {
 
   Future<void> _recolor(Color color) async {
     final ticket = ++_recolors;
-    final albums = await player.albumsMatching(color);
+    final albums = await player.albumsMatching(color, palette: coverPalette);
     // Une autre teinte entre-temps, ou une autre musique lancée.
     if (ticket != _recolors || !identical(player.nowPlaying, _colorQueue)) return;
     final playing = player.current;
@@ -650,12 +653,12 @@ class IpodNav extends ChangeNotifier {
   }
 
   /// Couleur au hasard : les morceaux des albums dont la pochette est
-  /// assortie à l'iPod, les pochettes variant d'un morceau à l'autre. Le temps de lire les pochettes, une
+  /// assortie au baladeur, les pochettes variant d'un morceau à l'autre. Le temps de lire les pochettes, une
   /// page « Chargement… ».
   Future<void> _colorShuffle(Color color) async {
     final wait = MenuPage(tr('Morceau au hasard (couleur)'), () => [MenuEntry(tr('Chargement…'))]);
     _push(wait);
-    final list = spreadAlbums(await player.albumsMatching(color));
+    final list = spreadAlbums(await player.albumsMatching(color, palette: coverPalette));
     if (!identical(page, wait)) return; // on est reparti entre-temps
     stack.removeLast();
     if (list.isEmpty) return _push(MenuPage(tr('Morceau au hasard (couleur)'), () => [MenuEntry(tr('Aucun élément'))]));
@@ -794,7 +797,7 @@ class IpodNav extends ChangeNotifier {
 
   /// Réglages › Fenêtre (Windows).
   MenuPage _windowMenu() => MenuPage(tr('Fenêtre'), live: true, () => [
-        // Sous Windows, rien ne réserve de place à l'iPod : on peut le garder
+        // Sous Windows, rien ne réserve de place au baladeur : on peut le garder
         // par-dessus les autres fenêtres.
         MenuEntry(
           tr('Premier plan'),
@@ -807,10 +810,10 @@ class IpodNav extends ChangeNotifier {
         // Et le poser où l'on veut, plutôt qu'à l'une de ses trois places.
         MenuEntry(
           tr('Position'),
-          value: () => ipodFree.value ? tr('Libre') : tr('Fixe'),
+          value: () => deviceFree.value ? tr('Libre') : tr('Fixe'),
           action: () {
-            ipodFree.value = !ipodFree.value;
-            Settings.setString('window.free', ipodFree.value ? 'on' : 'off');
+            deviceFree.value = !deviceFree.value;
+            Settings.setString('window.free', deviceFree.value ? 'on' : 'off');
           },
         ),
       ]);
@@ -823,7 +826,7 @@ class IpodNav extends ChangeNotifier {
           action: () {
             final on = !WheelClick.instance.enabled;
             WheelClick.instance.enabled = on;
-            Settings.setString('ipod.clicker', on ? 'on' : 'off');
+            Settings.setString('device.clicker', on ? 'on' : 'off');
           },
         ),
         MenuEntry(
@@ -855,8 +858,8 @@ class IpodNav extends ChangeNotifier {
 
   void _setKeys(KeyLayout k) {
     keys = k;
-    Settings.setString('ipod.keys', k.name);
-    if (k.name == 'custom') Settings.setString('ipod.customKeys', [k.up, k.down, k.enter, k.back].map((x) => x.keyId).join(','));
+    Settings.setString('device.keys', k.name);
+    if (k.name == 'custom') Settings.setString('device.customKeys', [k.up, k.down, k.enter, k.back].map((x) => x.keyId).join(','));
   }
 
   // --- Touches › Autres : quatre touches au choix --------------------------
@@ -903,7 +906,7 @@ class IpodNav extends ChangeNotifier {
 
   // --- Premier lancement ---------------------------------------------------
 
-  /// Comme un iPod qu'on allume pour la première fois : la langue, puis les touches.
+  /// Comme un baladeur qu'on allume pour la première fois : la langue, puis les touches.
   MenuPage _welcome() => MenuPage('Language', welcome: true, () => [
         for (final l in Lang.values)
           MenuEntry(l.nativeName, action: () {
@@ -954,7 +957,7 @@ class IpodNav extends ChangeNotifier {
           for (var i = 0; i < WheelClick.pitches.length; i++)
             MenuEntry(tr(WheelClick.pitchNames[i]), checked: () => i == click.pitch, action: () {
               click.pitch = i;
-              Settings.setString('ipod.clickPitch', '$i');
+              Settings.setString('device.clickPitch', '$i');
             }),
         ]);
     _focus(page, click.pitch);
@@ -1014,7 +1017,7 @@ class IpodNav extends ChangeNotifier {
           for (final s in backlightChoices)
             MenuEntry(backlightLabel(s), checked: () => s == backlight, action: () {
               backlight = s;
-              Settings.setString('ipod.backlight', '$s');
+              Settings.setString('device.backlight', '$s');
               menu(); // choisi : on revient aux Réglages
             }),
         ]);

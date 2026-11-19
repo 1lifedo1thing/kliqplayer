@@ -17,7 +17,7 @@ String spotifyKeyGuide() {
 <style>
   :root { color-scheme: light dark; --ink: #1c1c1e; --soft: #6b6b70; --paper: #f5f5f7; --card: #ffffff; --line: #e2e2e7; --accent: #1db954; }
   @media (prefers-color-scheme: dark) { :root { --ink: #f2f2f4; --soft: #a0a0a8; --paper: #151517; --card: #1f1f22; --line: #323236; } }
-  body { margin: 0; padding: 40px 16px 64px; background: var(--paper); color: var(--ink); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  body { margin: 0; padding: 40px 16px 64px; background: var(--paper); color: var(--ink); font: 16px/1.55 system-ui, "Segoe UI", sans-serif; }
   main { max-width: 640px; margin: 0 auto; }
   h1 { font-size: 28px; line-height: 1.2; margin: 0 0 12px; }
   p.lead { color: var(--soft); margin: 0 0 28px; }

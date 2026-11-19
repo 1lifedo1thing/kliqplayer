@@ -10,8 +10,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lecteur/core/library.dart';
 import 'package:lecteur/core/player.dart';
-import 'package:lecteur/ipod/classic.dart';
-import 'package:lecteur/ipod/nanos.dart';
+import 'package:lecteur/device/classic.dart';
+import 'package:lecteur/device/nanos.dart';
 
 import 'studio.dart';
 

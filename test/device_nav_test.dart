@@ -8,10 +8,10 @@ import 'package:lecteur/core/player.dart';
 import 'package:lecteur/core/settings.dart';
 import 'package:lecteur/core/source.dart';
 import 'package:lecteur/core/strings.dart';
-import 'package:lecteur/ipod/click.dart';
-import 'package:lecteur/ipod/classic.dart';
-import 'package:lecteur/ipod/mini.dart';
-import 'package:lecteur/ipod/nav.dart';
+import 'package:lecteur/device/click.dart';
+import 'package:lecteur/device/classic.dart';
+import 'package:lecteur/device/mini.dart';
+import 'package:lecteur/device/nav.dart';
 
 PlayerController _player() {
   final tracks = <Track>[];
@@ -26,7 +26,7 @@ PlayerController _player() {
 }
 
 /// Ouvre l'entrée [label] de la page en cours.
-void _open(IpodNav nav, String label) {
+void _open(DeviceNav nav, String label) {
   final p = nav.page as MenuPage;
   final i = p.entries.indexWhere((e) => e.label == label);
   expect(i, isNot(-1), reason: '« $label » dans ${p.title}');
@@ -38,9 +38,9 @@ void main() {
   test('premier lancement : langue, puis touches au choix, puis le menu principal', () {
     addTearDown(() {
       Lang.set(Lang.fr);
-      Settings.setString('ipod.keys', 'hjkl');
+      Settings.setString('device.keys', 'hjkl');
     });
-    final nav = IpodNav(_player(), look: const ClassicLook(), welcome: true);
+    final nav = DeviceNav(_player(), look: const ClassicLook(), welcome: true);
     expect(nav.page.title, 'Language');
     _open(nav, 'English');
     expect(nav.page.title, 'Keys');
@@ -69,7 +69,7 @@ void main() {
 
   test('une ligne disparaît d\'un menu : la sélection y reste', () {
     final player = _player()..notice = 'Erreur';
-    final nav = IpodNav(player, look: const ClassicLook());
+    final nav = DeviceNav(player, look: const ClassicLook());
     final root = nav.page as MenuPage;
     nav.scroll(10); // la dernière ligne
     player.notice = null; // (une commande a réussi : le message s'efface)
@@ -80,7 +80,7 @@ void main() {
   });
 
   test('Cover Flow : part de l\'album en cours, la molette fait défiler, bute aux bouts', () {
-    final nav = IpodNav(_player(), look: const ClassicLook());
+    final nav = DeviceNav(_player(), look: const ClassicLook());
     _open(nav, 'Musique');
     _open(nav, 'Cover Flow');
     final cf = nav.page as CoverFlowPage;
@@ -98,7 +98,7 @@ void main() {
       SongList('Prête', tracks),
       SongList.lazy('À charger', () async => tracks, uri: 'spotify:playlist:x'),
     ]);
-    final nav = IpodNav(player, look: const ClassicLook());
+    final nav = DeviceNav(player, look: const ClassicLook());
     _open(nav, 'Musique');
     _open(nav, 'Listes de lecture');
     final cf = nav.page as CoverFlowPage;
@@ -116,7 +116,7 @@ void main() {
     expect(cf.flipped, isFalse);
 
     // Sans Cover Flow (écran monochrome) : le menu d'avant.
-    final mini = IpodNav(player, look: const MiniLook());
+    final mini = DeviceNav(player, look: const MiniLook());
     _open(mini, 'Musique');
     _open(mini, 'Listes de lecture');
     expect(mini.page, isA<MenuPage>());
@@ -133,7 +133,7 @@ void main() {
     final player = PlayerController.preview(tracks: tracks, albums: albums);
     var now = DateTime(2026);
     withClock(Clock(() => now), () {
-      final nav = IpodNav(player, look: const ClassicLook());
+      final nav = DeviceNav(player, look: const ClassicLook());
       _open(nav, 'Musique');
       _open(nav, 'Cover Flow');
       final cf = nav.page as CoverFlowPage;
@@ -166,7 +166,7 @@ void main() {
 
   test('Cover Flow : valider retourne la pochette, la molette parcourt ses morceaux, MENU la remet', () async {
     final player = _player();
-    final nav = IpodNav(player, look: const ClassicLook());
+    final nav = DeviceNav(player, look: const ClassicLook());
     _open(nav, 'Musique');
     _open(nav, 'Cover Flow');
     final cf = nav.page as CoverFlowPage;
@@ -190,11 +190,11 @@ void main() {
   });
 
   test('pas de Cover Flow sur un écran monochrome ; on en ressort en changeant d\'appareil', () {
-    final mono = IpodNav(_player(), look: const MiniLook());
+    final mono = DeviceNav(_player(), look: const MiniLook());
     _open(mono, 'Musique');
     expect((mono.page as MenuPage).entries.map((e) => e.label), isNot(contains('Cover Flow')));
 
-    final nav = IpodNav(_player(), look: const ClassicLook());
+    final nav = DeviceNav(_player(), look: const ClassicLook());
     _open(nav, 'Musique');
     _open(nav, 'Cover Flow');
     nav.fitLook(const MiniLook());
@@ -203,7 +203,7 @@ void main() {
 
   test('Réglages : aléatoire et répétition changent à chaque appui', () {
     final player = _player();
-    final nav = IpodNav(player, look: const ClassicLook());
+    final nav = DeviceNav(player, look: const ClassicLook());
     _open(nav, 'Réglages');
     _open(nav, 'Lecture aléatoire');
     expect(player.shuffle, isTrue);
@@ -218,7 +218,7 @@ void main() {
   test('rétroéclairage : s\'éteint après le délai, se rallume au toucher', () {
     var now = DateTime(2026);
     withClock(Clock(() => now), () {
-      final nav = IpodNav(_player(), look: const ClassicLook())..backlight = 5;
+      final nav = DeviceNav(_player(), look: const ClassicLook())..backlight = 5;
       expect(nav.lit, isTrue);
       now = now.add(const Duration(seconds: 6));
       expect(nav.lit, isFalse);
@@ -237,7 +237,7 @@ void main() {
       Directory('${root.path}/$d').createSync();
     }
     final player = _player()..musicDir = root.path;
-    final nav = IpodNav(player, look: const ClassicLook());
+    final nav = DeviceNav(player, look: const ClassicLook());
     _open(nav, 'Réglages');
     _open(nav, 'Bibliothèque');
     _open(nav, 'Musique locale');
@@ -260,7 +260,7 @@ void main() {
     })
       ..musicDir = root.path;
     addTearDown(player.dispose);
-    final nav = IpodNav(player, look: const ClassicLook());
+    final nav = DeviceNav(player, look: const ClassicLook());
     _open(nav, 'Réglages');
     _open(nav, 'Bibliothèque');
     _open(nav, 'Musique locale');
@@ -275,7 +275,7 @@ void main() {
 
   test('Bibliothèque : Spotify ou musique locale, cochée celle qu\'on écoute', () {
     final player = PlayerController.preview(accounts: [_FakeAccount()]);
-    final nav = IpodNav(player, look: const ClassicLook());
+    final nav = DeviceNav(player, look: const ClassicLook());
     _open(nav, 'Réglages');
     _open(nav, 'Bibliothèque');
     final labels = (nav.page as MenuPage).entries.map((e) => e.label).toList();
@@ -289,7 +289,7 @@ void main() {
 
   test('Tonalité du clic : on entend chaque tonalité en parcourant, valider la garde', () {
     final click = WheelClick.instance;
-    final nav = IpodNav(_player(), look: const ClassicLook());
+    final nav = DeviceNav(_player(), look: const ClassicLook());
     _open(nav, 'Réglages');
     _open(nav, 'Commandes');
     expect((nav.page as MenuPage).entries.map((e) => e.label), ['Clic', 'Touches']);
@@ -310,7 +310,7 @@ void main() {
 
   test('Langue : les menus ouverts se traduisent sur place', () {
     addTearDown(() => Lang.set(Lang.fr));
-    final nav = IpodNav(_player(), look: const ClassicLook());
+    final nav = DeviceNav(_player(), look: const ClassicLook());
     _open(nav, 'Réglages');
     _open(nav, 'Langue');
     _open(nav, 'English');

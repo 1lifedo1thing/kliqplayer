@@ -8,7 +8,7 @@ import 'look.dart';
 import 'model.dart';
 import 'wheel.dart';
 
-/// Une teinte d'aluminium anodisé, relevée sur les photos d'Apple : la
+/// Une teinte d'aluminium anodisé, relevée sur les photos officielles : la
 /// couleur de la face ([base]), son reflet ([light]), l'ombre de ses flancs
 /// ([dark]) et, tout au bord, le métal qui fuit la lumière ([deep]).
 @immutable
@@ -108,15 +108,15 @@ const nano2Colors = [
 
 /// Le nano de 2e génération : fin, tout en aluminium anodisé (40 × 90 mm),
 /// petit écran couleur en haut, prise casque sous l'appareil.
-class Nano2Model extends IpodModel {
+class Nano2Model extends DeviceModel {
   const Nano2Model(this.color);
 
   final Anodized color;
 
   // ≈ 6,67 unités par mm.
   static const Size _size = Size(267, 600);
-  static const Rect _screen = Rect.fromLTWH(32, 46, 203, 153);
-  static const double _radius = 24;
+  static const Rect _screen = Rect.fromLTWH(26.5, 44, 214, 160.5);
+  static const double _radius = 8; // coins presque carrés (photos)
 
   @override
   String get id => 'nano2-${color.name}';
@@ -150,7 +150,7 @@ class Nano2Model extends IpodModel {
   bool get jackOnTop => false;
 
   @override
-  Offset get wheelCenter => const Offset(133.5, 420);
+  Offset get wheelCenter => const Offset(133.5, 400);
 
   @override
   WheelStyle get wheel => color.wheel(radius: 102, buttonRadius: 45, tintedButton: true);
@@ -197,7 +197,7 @@ const nano4Colors = [
 
 /// Le nano de 4e génération : long, galbé (38,7 × 90,7 mm), écran
 /// vertical, prise casque sous l'appareil.
-class Nano4Model extends IpodModel {
+class Nano4Model extends DeviceModel {
   const Nano4Model(this.color);
 
   final Anodized color;
@@ -223,6 +223,9 @@ class Nano4Model extends IpodModel {
 
   @override
   Color get coverColor => color.base;
+
+  @override
+  List<Color> get coverPalette => [for (final c in nano4Colors) c.base];
 
   @override
   Size get size => _size;
@@ -278,7 +281,7 @@ class Nano4Model extends IpodModel {
 /// ne le reçoivent pas, [deep] les flancs.
 const nano5Colors = [
   Anodized('argent', 'Argent', base: Color(0xFFA9A8AA), light: Color(0xFFD6D6D7), dark: Color(0xFF939394), deep: Color(0xFF515152)),
-  // (Absent des photos d'Apple : réglé d'après les autres teintes.)
+  // (Absent des photos officielles : réglé d'après les autres teintes.)
   Anodized('noir', 'Noir', base: Color(0xFF2C2C2F), light: Color(0xFF4E4E52), dark: Color(0xFF1F1F21), deep: Color(0xFF0A0A0B)),
   Anodized('violet', 'Violet', base: Color(0xFF4A3281), light: Color(0xFF654891), dark: Color(0xFF351D71), deep: Color(0xFF15184E)),
   Anodized('bleu', 'Bleu', base: Color(0xFF007CD9), light: Color(0xFF1A85E1), dark: Color(0xFF005DB8), deep: Color(0xFF12366C)),
@@ -291,7 +294,7 @@ const nano5Colors = [
 
 /// Le nano de 5e génération : le boîtier galbé de la 4e (38,7 × 90,7 mm),
 /// en aluminium poli, avec un écran plus haut et une molette plus petite.
-class Nano5Model extends IpodModel {
+class Nano5Model extends DeviceModel {
   const Nano5Model(this.color);
 
   final Anodized color;
@@ -319,6 +322,9 @@ class Nano5Model extends IpodModel {
   Color get coverColor => color.base;
 
   @override
+  List<Color> get coverPalette => [for (final c in nano5Colors) c.base];
+
+  @override
   Size get size => _size;
 
   @override
@@ -335,12 +341,12 @@ class Nano5Model extends IpodModel {
   bool get jackOnTop => false;
 
   @override
-  Offset get wheelCenter => const Offset(129, 468);
+  Offset get wheelCenter => const Offset(129, 470);
 
   /// Bouton central de la couleur du boîtier ; l'argent a une molette noire.
   @override
   WheelStyle get wheel =>
-      color.wheel(radius: 88, buttonRadius: 41, tintedButton: true, flatButton: true, darkRing: color.name == 'argent');
+      color.wheel(radius: 89, buttonRadius: 44, tintedButton: true, flatButton: true, darkRing: color.name == 'argent');
 
   /// En haut à gauche : le curseur du verrou.
   @override
@@ -493,6 +499,20 @@ class AnodizedBodyPainter extends CustomPainter {
               Colors.white.withValues(alpha: 0),
               Colors.black.withValues(alpha: 0.10),
             ], const [0, 0.25, 1]),
+        );
+        // Lumière en biais sur le métal : une large bande douce et une plus
+        // fine plus bas, qui traversent la teinte du bas à gauche vers le haut à droite.
+        canvas.drawRect(
+          all,
+          Paint()
+            ..shader = ui.Gradient.linear(Offset.zero, Offset(size.width, size.height), [
+              Colors.white.withValues(alpha: 0),
+              Colors.white.withValues(alpha: 0.16),
+              Colors.white.withValues(alpha: 0),
+              Colors.white.withValues(alpha: 0),
+              Colors.white.withValues(alpha: 0.08),
+              Colors.white.withValues(alpha: 0),
+            ], const [0.3, 0.4, 0.5, 0.62, 0.66, 0.7]),
         );
     }
     paintSatin(canvas, size, strength: shape == AluShape.polished ? 0.25 : (c.isBlack ? 0.6 : 1));

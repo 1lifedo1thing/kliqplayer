@@ -8,22 +8,22 @@ import 'package:lecteur/core/settings.dart';
 import 'package:lecteur/core/library.dart';
 import 'package:lecteur/core/player.dart';
 import 'package:lecteur/core/strings.dart';
-import 'package:lecteur/ipod/classic.dart';
-import 'package:lecteur/ipod/drawer.dart';
-import 'package:lecteur/ipod/ipod.dart';
-import 'package:lecteur/ipod/mini.dart';
-import 'package:lecteur/ipod/model.dart';
-import 'package:lecteur/ipod/nanos.dart';
-import 'package:lecteur/ipod/screen.dart';
-import 'package:lecteur/ipod/shuffle.dart';
-import 'package:lecteur/ipod/vintage.dart';
+import 'package:lecteur/device/classic.dart';
+import 'package:lecteur/device/drawer.dart';
+import 'package:lecteur/device/device.dart';
+import 'package:lecteur/device/mini.dart';
+import 'package:lecteur/device/model.dart';
+import 'package:lecteur/device/nanos.dart';
+import 'package:lecteur/device/screen.dart';
+import 'package:lecteur/device/shuffle.dart';
+import 'package:lecteur/device/vintage.dart';
 
 const _window = Size(460, 760);
 
 /// Le tiroir dans cette fenêtre : 230 px de large (50 % de la fenêtre,
-/// au moins 230), dont 28 restent engagés derrière l'iPod une fois ouvert ;
+/// au moins 230), dont 28 restent engagés derrière le baladeur une fois ouvert ;
 /// au tout début de l'ouverture, son bord extérieur part de 32 px en retrait
-/// du flanc de l'iPod.
+/// du flanc du baladeur.
 const double _drawerW = 230, _tuck = 28, _hideBack = 32;
 const double _openOut = _drawerW - _tuck;
 
@@ -36,7 +36,7 @@ Future<void> _show(WidgetTester tester) async {
     MaterialApp(
       home: Material(
         type: MaterialType.transparency,
-        child: IpodStage(player: PlayerController.preview(), initial: const ClassicModel()),
+        child: DeviceStage(player: PlayerController.preview(), initial: const ClassicModel()),
       ),
     ),
   );
@@ -50,17 +50,17 @@ Future<void> _settle(WidgetTester tester) async {
   }
 }
 
-Rect _device(WidgetTester tester) => tester.getRect(find.byType(IpodDevice));
+Rect _device(WidgetTester tester) => tester.getRect(find.byType(DeviceBody));
 
-Rect _drawerRect(WidgetTester tester) => tester.getRect(find.byType(IpodDrawer));
+Rect _drawerRect(WidgetTester tester) => tester.getRect(find.byType(DeviceDrawer));
 
-/// Rangé et au repos : il n'est même plus dessiné (caché derrière l'iPod).
-bool _stowed(WidgetTester tester) => find.byType(IpodDrawer).evaluate().isEmpty;
+/// Rangé et au repos : il n'est même plus dessiné (caché derrière le baladeur).
+bool _stowed(WidgetTester tester) => find.byType(DeviceDrawer).evaluate().isEmpty;
 
-/// Côté du tiroir : 1 à droite de l'iPod, -1 à gauche.
+/// Côté du tiroir : 1 à droite du baladeur, -1 à gauche.
 int _side(WidgetTester tester) => _drawerRect(tester).center.dx > _device(tester).center.dx ? 1 : -1;
 
-/// De combien le bord extérieur du tiroir dépasse du flanc de l'iPod
+/// De combien le bord extérieur du tiroir dépasse du flanc du baladeur
 /// (négatif : il est rangé derrière).
 double _out(WidgetTester tester) {
   final d = _device(tester), r = _drawerRect(tester);
@@ -87,7 +87,7 @@ Future<void> _drag(WidgetTester tester, Offset from, Offset by, {Duration over =
 }
 
 void main() {
-  testWidgets('rangé, il est caché derrière l\'iPod', (tester) async {
+  testWidgets('rangé, il est caché derrière l\'baladeur', (tester) async {
     await _show(tester);
     expect(_stowed(tester), isTrue);
   });
@@ -106,7 +106,7 @@ void main() {
     await _settle(tester);
     expect(_side(tester), -1);
     expect(_out(tester), moreOrLessEquals(_openOut, epsilon: 0.5));
-    // Ouvert et refermé, l'iPod revient au centre.
+    // Ouvert et refermé, le baladeur revient au centre.
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await _settle(tester);
     expect(_device(tester).center.dx, moreOrLessEquals(_window.width / 2, epsilon: 0.5));
@@ -123,6 +123,26 @@ void main() {
     expect(_out(tester), moreOrLessEquals(-_hideBack + 60, epsilon: 0.5));
     await g.up();
     await _settle(tester);
+  });
+
+  testWidgets('sorti, il ne se décolle pas de l\'baladeur si on tire plus loin', (tester) async {
+    await _show(tester);
+    final g = await tester.startGesture(_handle(tester, 1), kind: PointerDeviceKind.mouse);
+    var most = double.negativeInfinity;
+    for (var i = 0; i < 20; i++) {
+      await g.moveBy(const Offset(25, 0), timeStamp: Duration(milliseconds: 8 * (i + 1)));
+      await tester.pump(const Duration(milliseconds: 8));
+      most = math.max(most, _out(tester));
+    }
+    await g.up(); // lâché d'un coup sec : l'élan ne l'emmène pas plus loin
+    for (var i = 0; i < 60; i++) {
+      await tester.pump(const Duration(milliseconds: 16));
+      most = math.max(most, _out(tester));
+    }
+    // Même jeu qu'en hauteur : 12 px au plus au-delà de la sortie.
+    expect(most, lessThanOrEqualTo(_openOut + 12.01));
+    await _settle(tester);
+    expect(_out(tester), moreOrLessEquals(_openOut, epsilon: 0.5));
   });
 
   testWidgets('lâché doucement avant la moitié, il se referme', (tester) async {
@@ -159,7 +179,7 @@ void main() {
     expect(_drawerRect(tester).center.dy, moreOrLessEquals(_device(tester).center.dy, epsilon: 0.5));
   });
 
-  testWidgets('lancé vers l\'iPod, il se range', (tester) async {
+  testWidgets('lancé vers l\'baladeur, il se range', (tester) async {
     await _show(tester);
     await tester.tapAt(_handle(tester, 1));
     await _settle(tester);
@@ -173,17 +193,17 @@ void main() {
     await _show(tester);
     await tester.sendKeyEvent(LogicalKeyboardKey.keyT);
     await _settle(tester);
-    final mini = find.byWidgetPredicate((w) => w is IpodPreview && w.model.family == 'mini');
+    final mini = find.byWidgetPredicate((w) => w is DevicePreview && w.model.family == 'mini');
     expect(mini, findsOneWidget);
     await tester.tap(mini);
     await tester.pump();
     // Pendant l'échange, le Classic est encore en main.
-    expect(find.byWidgetPredicate((w) => w is IpodDevice && w.model is ClassicModel), findsOneWidget);
+    expect(find.byWidgetPredicate((w) => w is DeviceBody && w.model is ClassicModel), findsOneWidget);
     for (var i = 0; i < 400; i++) {
       await tester.pump(const Duration(milliseconds: 16));
     }
-    expect(find.byWidgetPredicate((w) => w is IpodDevice && w.model is MiniModel), findsOneWidget);
-    expect(find.byWidgetPredicate((w) => w is IpodDevice && w.model is ClassicModel), findsNothing);
+    expect(find.byWidgetPredicate((w) => w is DeviceBody && w.model is MiniModel), findsOneWidget);
+    expect(find.byWidgetPredicate((w) => w is DeviceBody && w.model is ClassicModel), findsNothing);
     expect(_stowed(tester), isTrue, reason: 'le tiroir se referme une fois branché');
   });
 
@@ -197,7 +217,7 @@ void main() {
     // L'éventail ne s'ouvre qu'au survol de l'emplacement.
     // Le dernier « Violet » du tiroir : celui du nano 4G (le shuffle 2G en a un aussi).
     final violet = _swatch('Violet').last;
-    final nano4 = find.byWidgetPredicate((w) => w is IpodPreview && w.model.family == 'nano4');
+    final nano4 = find.byWidgetPredicate((w) => w is DevicePreview && w.model.family == 'nano4');
     await tester.ensureVisible(nano4); // le tiroir défile jusqu'à lui
     await _settle(tester);
     await mouse.moveTo(tester.getCenter(nano4));
@@ -207,7 +227,7 @@ void main() {
     final corner = tester.renderObject<RenderBox>(violet).localToGlobal(const Offset(8, 10));
     await mouse.moveTo(corner);
     await _settle(tester);
-    expect(find.byWidgetPredicate((w) => w is IpodPreview && w.model.id == Nano4Model(nano4Colors[2]).id), findsOneWidget,
+    expect(find.byWidgetPredicate((w) => w is DevicePreview && w.model.id == Nano4Model(nano4Colors[2]).id), findsOneWidget,
         reason: 'l\'éventail montre la teinte');
     final violetNano = Nano4Model(nano4Colors[2]).id;
     expect(screenPower.value, isTrue);
@@ -218,10 +238,10 @@ void main() {
     for (var i = 0; i < 6; i++) {
       await tester.pump(const Duration(milliseconds: 16));
     }
-    expect(find.byWidgetPredicate((w) => w is IpodPreview && w.model.id == violetNano), findsWidgets,
+    expect(find.byWidgetPredicate((w) => w is DevicePreview && w.model.id == violetNano), findsWidgets,
         reason: 'l\'emplacement a pris la teinte');
     expect(screenPower.value, isTrue, reason: 'l\'éventail se range avant le débranchement');
-    expect(find.byWidgetPredicate((w) => w is IpodDevice && w.model is ClassicModel), findsOneWidget);
+    expect(find.byWidgetPredicate((w) => w is DeviceBody && w.model is ClassicModel), findsOneWidget);
     for (var i = 0; i < 40; i++) {
       await tester.pump(const Duration(milliseconds: 16));
     }
@@ -229,7 +249,7 @@ void main() {
     for (var i = 0; i < 400; i++) {
       await tester.pump(const Duration(milliseconds: 16));
     }
-    expect(find.byWidgetPredicate((w) => w is IpodDevice && w.model.id == Nano4Model(nano4Colors[2]).id), findsOneWidget);
+    expect(find.byWidgetPredicate((w) => w is DeviceBody && w.model.id == Nano4Model(nano4Colors[2]).id), findsOneWidget);
   });
 
   testWidgets('fenêtre minuscule : des pastilles au lieu de l\'éventail', (tester) async {
@@ -241,7 +261,7 @@ void main() {
     // Survolée, une pastille habille l'appareil.
     await mouse.moveTo(tester.getCenter(dots.at(2)));
     await _settle(tester);
-    expect(find.byWidgetPredicate((w) => w is IpodPreview && w.model.id == Nano4Model(nano4Colors[2]).id), findsOneWidget);
+    expect(find.byWidgetPredicate((w) => w is DevicePreview && w.model.id == Nano4Model(nano4Colors[2]).id), findsOneWidget);
   });
 
   testWidgets('l\'éventail dépasserait du haut de la fenêtre : le tiroir descend l\'appareil', (tester) async {
@@ -266,7 +286,7 @@ void main() {
     final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
     addTearDown(mouse.removePointer);
     await mouse.addPointer(location: Offset.zero);
-    final photo = find.byWidgetPredicate((w) => w is IpodPreview && w.model.family == const PhotoModel().family);
+    final photo = find.byWidgetPredicate((w) => w is DevicePreview && w.model.family == const PhotoModel().family);
     await tester.ensureVisible(photo);
     await _settle(tester);
     final scale = find.ancestor(of: photo, matching: find.byType(AnimatedScale));
@@ -284,7 +304,7 @@ void main() {
     addTearDown(mouse.removePointer);
     await mouse.addPointer(location: Offset.zero);
     // Le Classic est en main : son emplacement (vide) propose l'autre teinte.
-    final classic = find.byWidgetPredicate((w) => w is IpodPreview && w.model.family == 'classic');
+    final classic = find.byWidgetPredicate((w) => w is DevicePreview && w.model.family == 'classic');
     await tester.ensureVisible(classic.first);
     await _settle(tester);
     await mouse.moveTo(tester.getCenter(classic.first));
@@ -297,7 +317,7 @@ void main() {
     await mouse.down(at);
     await mouse.up();
     await _settle(tester);
-    expect(find.byWidgetPredicate((w) => w is IpodDevice && w.model.id == const ClassicModel(ClassicColor.noir).id), findsOneWidget);
+    expect(find.byWidgetPredicate((w) => w is DeviceBody && w.model.id == const ClassicModel(ClassicColor.noir).id), findsOneWidget);
     // La souris n'a pas bougé : l'éventail est rangé et ne se rouvre pas.
     expect(_swatch('Argent'), findsNothing);
     expect(_swatch('Noir'), findsNothing);
@@ -309,7 +329,7 @@ void main() {
     expect(_swatch('Argent'), findsOneWidget);
   });
 
-  testWidgets('en changeant d\'iPod, on reste sur le même écran', (tester) async {
+  testWidgets('en changeant d\'baladeur, on reste sur le même écran', (tester) async {
     final player = PlayerController.preview(
       tracks: const [Track(id: '/x/a.flac', title: 'Néons', artist: 'Les Fréquences', album: 'Bleu nuit')],
       index: 0,
@@ -323,7 +343,7 @@ void main() {
       MaterialApp(
         home: Material(
           type: MaterialType.transparency,
-          child: IpodStage(player: player, initial: const ClassicModel()),
+          child: DeviceStage(player: player, initial: const ClassicModel()),
         ),
       ),
     );
@@ -334,18 +354,18 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await _settle(tester);
-    final classic = find.byWidgetPredicate((w) => w is IpodDevice && w.model is ClassicModel);
+    final classic = find.byWidgetPredicate((w) => w is DeviceBody && w.model is ClassicModel);
     expect(find.descendant(of: classic, matching: find.text('Morceau au hasard')), findsNothing,
         reason: 'on a quitté le menu principal');
     expect(find.descendant(of: classic, matching: find.text('En lecture')), findsOneWidget);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.keyT);
     await _settle(tester);
-    await tester.tap(find.byWidgetPredicate((w) => w is IpodPreview && w.model.family == 'mini'));
+    await tester.tap(find.byWidgetPredicate((w) => w is DevicePreview && w.model.family == 'mini'));
     for (var i = 0; i < 400; i++) {
       await tester.pump(const Duration(milliseconds: 16));
     }
-    final mini = find.byWidgetPredicate((w) => w is IpodDevice && w.model is MiniModel);
+    final mini = find.byWidgetPredicate((w) => w is DeviceBody && w.model is MiniModel);
     expect(mini, findsOneWidget);
     expect(find.descendant(of: mini, matching: find.text('En lecture')), findsOneWidget);
     expect(find.descendant(of: mini, matching: find.text('Morceau au hasard')), findsNothing);
@@ -353,7 +373,7 @@ void main() {
 
   testWidgets('h j k l : naviguer dans les menus comme dans vim', (tester) async {
     await _show(tester);
-    final device = find.byType(IpodDevice);
+    final device = find.byType(DeviceBody);
     bool shows(String t) => find.descendant(of: device, matching: find.text(t)).evaluate().isNotEmpty;
     await tester.sendKeyEvent(LogicalKeyboardKey.keyJ); // Réglages
     await tester.sendKeyEvent(LogicalKeyboardKey.keyK); // Musique
@@ -367,10 +387,10 @@ void main() {
   });
 
   testWidgets('Réglages › Touches : Z Q S D remplace h j k l', (tester) async {
-    Settings.setString('ipod.keys', 'zqsd');
-    addTearDown(() => Settings.setString('ipod.keys', 'hjkl'));
+    Settings.setString('device.keys', 'zqsd');
+    addTearDown(() => Settings.setString('device.keys', 'hjkl'));
     await _show(tester);
-    final device = find.byType(IpodDevice);
+    final device = find.byType(DeviceBody);
     bool shows(String t) => find.descendant(of: device, matching: find.text(t)).evaluate().isNotEmpty;
     await tester.sendKeyEvent(LogicalKeyboardKey.keyS); // Réglages
     await tester.sendKeyEvent(LogicalKeyboardKey.keyZ); // Musique
@@ -405,13 +425,13 @@ void main() {
       MaterialApp(
         home: Material(
           type: MaterialType.transparency,
-          child: IpodStage(player: player, initial: Shuffle4Model(shuffle4Colors.first)),
+          child: DeviceStage(player: player, initial: Shuffle4Model(shuffle4Colors.first)),
         ),
       ),
     );
     await _settle(tester);
-    expect(find.byType(IpodScreen), findsNothing);
-    await tester.tapAt(tester.getCenter(find.byType(IpodWheel)));
+    expect(find.byType(DeviceScreen), findsNothing);
+    await tester.tapAt(tester.getCenter(find.byType(DeviceWheel)));
     await tester.pump(const Duration(milliseconds: 50));
     expect(player.playing, isTrue);
     await _settle(tester);
@@ -421,17 +441,17 @@ void main() {
     await _show(tester);
     await tester.sendKeyEvent(LogicalKeyboardKey.keyT);
     await _settle(tester);
-    final shuffle = find.byWidgetPredicate((w) => w is IpodPreview && w.model.family == 'shuffle4');
+    final shuffle = find.byWidgetPredicate((w) => w is DevicePreview && w.model.family == 'shuffle4');
     await tester.ensureVisible(shuffle);
     await _settle(tester);
     await tester.tap(shuffle, kind: PointerDeviceKind.mouse);
     final heights = <double>[];
     for (var i = 0; i < 400; i++) {
       await tester.pump(const Duration(milliseconds: 16));
-      final f = find.byType(IpodDrawer);
+      final f = find.byType(DeviceDrawer);
       if (f.evaluate().isNotEmpty) heights.add(tester.getSize(f).height);
     }
-    expect(find.byWidgetPredicate((w) => w is IpodDevice && w.model is Shuffle4Model), findsOneWidget);
+    expect(find.byWidgetPredicate((w) => w is DeviceBody && w.model is Shuffle4Model), findsOneWidget);
     var jump = 0.0;
     for (var i = 1; i < heights.length; i++) {
       jump = math.max(jump, (heights[i] - heights[i - 1]).abs());
@@ -444,14 +464,14 @@ void main() {
     await _show(tester);
     await tester.sendKeyEvent(LogicalKeyboardKey.keyT);
     await _settle(tester);
-    final classicSlot = find.byWidgetPredicate((w) => w is IpodPreview && w.model.family == 'classic', skipOffstage: false);
+    final classicSlot = find.byWidgetPredicate((w) => w is DevicePreview && w.model.family == 'classic', skipOffstage: false);
     Rect view() => tester.getRect(find.byType(Scrollable).first);
     // Le tiroir est en haut : l'emplacement du Classic, plus bas, n'est pas visible.
-    final slot = find.byType(IpodDrawer);
+    final slot = find.byType(DeviceDrawer);
     expect(tester.getRect(slot).height, greaterThan(0));
     final classicTop = tester.getRect(find.ancestor(of: classicSlot, matching: find.byType(SizedBox)).first).top;
     expect(classicTop, greaterThan(view().bottom), reason: 'hors de vue au départ');
-    await tester.tap(find.byWidgetPredicate((w) => w is IpodPreview && w.model.family == 'gen1'), kind: PointerDeviceKind.mouse);
+    await tester.tap(find.byWidgetPredicate((w) => w is DevicePreview && w.model.family == 'gen1'), kind: PointerDeviceKind.mouse);
     // Le temps que la prise sorte : le tiroir a défilé.
     var seenStowing = false;
     for (var i = 0; i < 60; i++) {
@@ -495,14 +515,14 @@ void main() {
       MaterialApp(
         home: Material(
           type: MaterialType.transparency,
-          child: IpodStage(player: player, initial: const ClassicModel()),
+          child: DeviceStage(player: player, initial: const ClassicModel()),
         ),
       ),
     );
     await _settle(tester);
     await tester.sendKeyEvent(LogicalKeyboardKey.keyT);
     await _settle(tester);
-    await tester.tap(find.byWidgetPredicate((w) => w is IpodPreview && w.model.family == 'mini'));
+    await tester.tap(find.byWidgetPredicate((w) => w is DevicePreview && w.model.family == 'mini'));
     // L'écran s'éteint d'abord, puis la prise est arrachée.
     for (var i = 0; i < 20; i++) {
       await tester.pump(const Duration(milliseconds: 16));
@@ -529,7 +549,7 @@ void main() {
       MaterialApp(
         home: Material(
           type: MaterialType.transparency,
-          child: IpodStage(player: player, initial: const ClassicModel()),
+          child: DeviceStage(player: player, initial: const ClassicModel()),
         ),
       ),
     );
@@ -537,7 +557,7 @@ void main() {
     expect(player.shuffling, isFalse);
     await tester.sendKeyEvent(LogicalKeyboardKey.keyT);
     await _settle(tester);
-    final shuffle1Slot = find.byWidgetPredicate((w) => w is IpodPreview && w.model.family == 'shuffle1');
+    final shuffle1Slot = find.byWidgetPredicate((w) => w is DevicePreview && w.model.family == 'shuffle1');
     await tester.ensureVisible(shuffle1Slot);
     await _settle(tester);
     await tester.tap(shuffle1Slot, kind: PointerDeviceKind.mouse);
@@ -548,7 +568,7 @@ void main() {
     expect(player.shuffle, isFalse, reason: 'le réglage, lui, ne change pas');
     await tester.sendKeyEvent(LogicalKeyboardKey.keyT);
     await _settle(tester);
-    final classicSlot = find.byWidgetPredicate((w) => w is IpodPreview && w.model.family == 'classic');
+    final classicSlot = find.byWidgetPredicate((w) => w is DevicePreview && w.model.family == 'classic');
     await tester.ensureVisible(classicSlot);
     await _settle(tester);
     await tester.tap(classicSlot, kind: PointerDeviceKind.mouse);
@@ -588,7 +608,7 @@ void main() {
       MaterialApp(
         home: Material(
           type: MaterialType.transparency,
-          child: IpodStage(player: player, initial: const ClassicModel()),
+          child: DeviceStage(player: player, initial: const ClassicModel()),
         ),
       ),
     );
@@ -610,12 +630,12 @@ void main() {
 
   testWidgets('ouvrir et fermer le tiroir ne le reconstruit pas (sa photo reste prête)', (tester) async {
     await _show(tester);
-    final before = tester.element(find.byType(IpodDrawer, skipOffstage: false));
+    final before = tester.element(find.byType(DeviceDrawer, skipOffstage: false));
     for (var i = 0; i < 2; i++) {
       await tester.sendKeyEvent(LogicalKeyboardKey.keyT);
       await _settle(tester);
     }
-    expect(tester.element(find.byType(IpodDrawer, skipOffstage: false)), same(before));
+    expect(tester.element(find.byType(DeviceDrawer, skipOffstage: false)), same(before));
   });
 }
 
@@ -626,18 +646,18 @@ Finder _byType(String name) => find.byWidgetPredicate((w) => w.runtimeType.toStr
 
 /// Ouvre le tiroir dans une fenêtre [window] et survole l'emplacement
 /// [family], placé tout en haut de la partie visible du tiroir.
-Future<(Finder, TestGesture)> _hoverTopSlot(WidgetTester tester, Size window, IpodModel model, String family) async {
+Future<(Finder, TestGesture)> _hoverTopSlot(WidgetTester tester, Size window, DeviceModel model, String family) async {
   tester.view
     ..physicalSize = window
     ..devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(MaterialApp(
-    home: Material(type: MaterialType.transparency, child: IpodStage(player: PlayerController.preview(), initial: model)),
+    home: Material(type: MaterialType.transparency, child: DeviceStage(player: PlayerController.preview(), initial: model)),
   ));
   await _settle(tester);
   await tester.sendKeyEvent(LogicalKeyboardKey.keyT);
   await _settle(tester);
-  final slot = find.byWidgetPredicate((w) => w is IpodPreview && w.model.family == family).first;
+  final slot = find.byWidgetPredicate((w) => w is DevicePreview && w.model.family == family).first;
   await tester.ensureVisible(slot);
   await _settle(tester);
   final scrollable = find.byType(Scrollable);

@@ -1,8 +1,8 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lecteur/ipod/ipod.dart';
-import 'package:lecteur/ipod/classic.dart';
+import 'package:lecteur/device/device.dart';
+import 'package:lecteur/device/classic.dart';
 
 /// La molette seule, et le journal de ce qu'elle a déclenché.
 Future<List<String>> _pumpWheel(WidgetTester tester) async {
@@ -14,7 +14,7 @@ Future<List<String>> _pumpWheel(WidgetTester tester) async {
         child: SizedBox(
           width: G.wheelRadius * 2,
           height: G.wheelRadius * 2,
-          child: IpodWheel(
+          child: DeviceWheel(
             style: const ClassicModel().wheel,
             onScroll: (d) => log.add('scroll $d'),
             onDown: (z) => log.add('down ${z.name}'),
@@ -29,7 +29,7 @@ Future<List<String>> _pumpWheel(WidgetTester tester) async {
 }
 
 Offset _zone(WidgetTester tester, Offset fromCenter) =>
-    tester.getCenter(find.byType(IpodWheel)) + fromCenter;
+    tester.getCenter(find.byType(DeviceWheel)) + fromCenter;
 
 void main() {
   testWidgets('clic net sur ⏭', (tester) async {

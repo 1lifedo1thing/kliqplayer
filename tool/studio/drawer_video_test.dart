@@ -1,6 +1,6 @@
-// Studio : la petite vidéo de l'encadré « A drawer of iPods » du site. Une
-// souris monte au coin de l'iPod, tire la poignée, le tiroir s'ouvre, elle
-// choisit le mini : l'iPod se débranche, retourne au tiroir, le mini sort et
+// Studio : la petite vidéo de l'encadré « A drawer of baladeurs » du site. Une
+// souris monte au coin du baladeur, tire la poignée, le tiroir s'ouvre, elle
+// choisit le mini : le baladeur se débranche, retourne au tiroir, le mini sort et
 // se branche. Images (30 par seconde) dans build/studio/drawer/, puis :
 //   flutter test tool/studio/drawer_video_test.dart && tool/studio/drawer_video.sh
 // shortcut: le parcours de la souris est réglé à la main pour une fenêtre de
@@ -15,9 +15,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lecteur/core/library.dart';
 import 'package:lecteur/core/player.dart';
-import 'package:lecteur/ipod/drawer.dart';
-import 'package:lecteur/ipod/ipod.dart';
-import 'package:lecteur/ipod/nanos.dart';
+import 'package:lecteur/device/drawer.dart';
+import 'package:lecteur/device/device.dart';
+import 'package:lecteur/device/nanos.dart';
 
 import 'studio.dart';
 
@@ -27,7 +27,7 @@ const _frame = Duration(microseconds: 33333); // 30 images par seconde
 void main() {
   setUpStudio(_out);
 
-  testWidgets('tiroir : ouvrir, changer d\'iPod', (tester) async {
+  testWidgets('tiroir : ouvrir, changer d\'baladeur', (tester) async {
     for (final f in Directory(_out).listSync()) {
       f.deleteSync();
     }
@@ -64,8 +64,8 @@ void main() {
       }
     }
 
-    final device = tester.getRect(find.byType(IpodDevice));
-    // La poignée de droite, derrière le coin du haut (comme test/ipod_drawer_test.dart).
+    final device = tester.getRect(find.byType(DeviceBody));
+    // La poignée de droite, derrière le coin du haut (comme test/device_drawer_test.dart).
     final handle = Offset(device.right + 6, device.top + 36 * device.width / 412 + 10 + 23);
 
     await hold(0.4);
@@ -80,7 +80,7 @@ void main() {
     down = false;
     await hold(0.6);
 
-    final mini = find.byWidgetPredicate((w) => w is IpodPreview && w.model.family == 'mini');
+    final mini = find.byWidgetPredicate((w) => w is DevicePreview && w.model.family == 'mini');
     await glide(tester.getCenter(mini), 0.9); // survol : il se soulève
     await hold(0.5);
     down = true;

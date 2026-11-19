@@ -19,7 +19,7 @@ set -euo pipefail
 
 root=$(cd "$(dirname "$0")/../.." && pwd)
 bundle="$root/build/linux/x64/release/bundle"
-music="${LECTEUR_MUSIC:-$HOME/Music/Musique Ipod}"
+music="${LECTEUR_MUSIC:-$HOME/Music}"
 envs="$HOME/.local/share/lecteur-envs"
 all=(ubuntu22 ubuntu24 debian12 fedora opensuse arch)
 

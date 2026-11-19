@@ -55,7 +55,7 @@ class JsonStore {
     if (inTest) return;
     _changed = true;
     // Écrire le fichier bloquait l'appli ~60 ms, en pleine animation (choix
-    // d'un iPod, d'une teinte) : on regroupe les changements et on écrit un
+    // d'un baladeur, d'une teinte) : on regroupe les changements et on écrit un
     // peu plus tard, en arrière-plan.
     _pending?.cancel();
     _pending = Timer(const Duration(milliseconds: 400), _save);
