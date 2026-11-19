@@ -402,7 +402,7 @@ class PhotoModel extends IpodModel {
   HoldSwitch? get hold => const HoldSwitch(346);
 
   @override
-  ScreenLook get look => const ClassicLook(ui: ColorUi.video);
+  ScreenLook get look => const ClassicLook(ui: ColorUi.video, landscape: Size(256, 192));
 
   @override
   CustomPainter get body => const _WhiteBodyPainter(_size, _radius, _screen);
@@ -507,7 +507,7 @@ class Nano1Model extends IpodModel {
   };
 
   @override
-  ScreenLook get look => const ClassicLook(ui: ColorUi.video);
+  ScreenLook get look => const ClassicLook(ui: ColorUi.video, landscape: Size(200, 150));
 
   @override
   CustomPainter get body => switch (color) {

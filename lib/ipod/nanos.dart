@@ -160,7 +160,7 @@ class Nano2Model extends IpodModel {
   HoldSwitch? get hold => const HoldSwitch(40);
 
   @override
-  ScreenLook get look => const ClassicLook(ui: ColorUi.video);
+  ScreenLook get look => const ClassicLook(ui: ColorUi.video, landscape: Size(200, 150));
 
   @override
   CustomPainter get body => AnodizedBodyPainter(color, _radius, _screen, shape: AluShape.tube);

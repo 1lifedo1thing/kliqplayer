@@ -448,7 +448,7 @@ const _font = 'Noto Sans';
 enum ColorUi { video, classic }
 
 class ClassicLook extends ScreenLook {
-  const ClassicLook({this.portrait = false, this.tall = false, this.ui = ColorUi.classic});
+  const ClassicLook({this.portrait = false, this.tall = false, this.ui = ColorUi.classic, this.landscape = const Size(320, 240)});
 
   /// Écran vertical, 240 × 320 (nano de 4e génération).
   final bool portrait;
@@ -457,6 +457,11 @@ class ClassicLook extends ScreenLook {
   final bool tall;
 
   final ColorUi ui;
+
+  /// Taille logique de l'écran horizontal : plus petite que 320 × 240 sur
+  /// les petits écrans (nano 1G et 2G, photo), pour que le texte y garde à
+  /// peu près la taille qu'il a sur le 5G au lieu d'y être miniaturisé.
+  final Size landscape;
 
   bool get _modern => ui == ColorUi.classic;
 
@@ -495,13 +500,13 @@ class ClassicLook extends ScreenLook {
       : const [NowPlayingMode.scrub, NowPlayingMode.art, NowPlayingMode.rating];
 
   @override
-  Size get size => portrait ? Size(240, tall ? 376 : 320) : const Size(320, 240);
+  Size get size => portrait ? Size(240, tall ? 376 : 320) : landscape;
 
   @override
   double get rowHeight => 24;
 
   @override
-  int get visibleRows => portrait ? (tall ? 14 : 12) : 9;
+  int get visibleRows => portrait ? (tall ? 14 : 12) : ((landscape.height - _barH) / rowHeight).floor();
 
   @override
   double get scrollbarWidth => 9;
@@ -558,7 +563,7 @@ class ClassicLook extends ScreenLook {
 
   @override
   Widget nowPlaying(PlayerController player, NowPlayingMode mode) =>
-      portrait ? _NowPlayingPortrait(player: player, mode: mode, tall: tall) : _NowPlaying(player: player, mode: mode, modern: _modern);
+      portrait ? _NowPlayingPortrait(player: player, mode: mode, tall: tall) : _NowPlaying(player: player, mode: mode, modern: _modern, height: size.height - _barH);
 }
 
 // --- Barre de titre ----------------------------------------------------------
@@ -820,10 +825,13 @@ String _time(Duration d) {
 }
 
 class _NowPlaying extends StatelessWidget {
-  const _NowPlaying({required this.player, required this.mode, required this.modern});
+  const _NowPlaying({required this.player, required this.mode, required this.modern, required this.height});
 
   final PlayerController player;
   final NowPlayingMode mode;
+
+  /// Hauteur sous la barre de titre.
+  final double height;
 
   /// Interface de 2007 : la pochette de biais, avec son reflet.
   final bool modern;
@@ -844,7 +852,10 @@ class _NowPlaying extends StatelessWidget {
     // iPod ; rien si le morceau a été lancé ailleurs (appli Spotify).
     final position = player.queueIndex >= 0 ? trOf(player.queueIndex + 1, player.nowPlaying.length) : '';
 
-    final art = modern ? 108.0 : 116.0;
+    // Sur les petits écrans (nano 1G et 2G), la pochette rapetisse et le
+    // texte remonte pour rester au-dessus de la barre de progression.
+    final art = math.min(modern ? 108.0 : 116.0, height - 74);
+    final textTop = math.min(40.0, height - 122);
     return Stack(
       children: [
         Positioned(
@@ -861,7 +872,7 @@ class _NowPlaying extends StatelessWidget {
         Positioned(
           left: 10 + art + 12,
           right: 8,
-          top: 40,
+          top: textTop,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
