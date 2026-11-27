@@ -6,6 +6,7 @@ class DeviceBody extends StatefulWidget {
     required this.model,
     required this.player,
     required this.nav,
+    this.lit,
     this.onWindowDrag,
     this.onHoldBegin,
     this.onHoldUpdate,
@@ -17,6 +18,9 @@ class DeviceBody extends StatefulWidget {
 
   /// Navigation de la scène, passée d'un appareil à l'autre.
   final DeviceNav nav;
+
+  /// Rétroéclairage des boutons, de 0 à 1 : suit le voyant de la prise.
+  final ValueListenable<double>? lit;
 
   /// On commence à déplacer la fenêtre en tenant l'appareil.
   final VoidCallback? onWindowDrag;
@@ -310,7 +314,11 @@ class _DeviceBodyState extends State<DeviceBody> {
                 builder: (context, child) => IgnorePointer(ignoring: !_nav.welcoming, child: child),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(m.screenCornerRadius),
+                  // Remplit toute la fenêtre de l'écran : ses proportions, relevées
+                  // sur photo, s'écartent d'un ou deux pour cent de celles de
+                  // l'image affichée, et sinon des bandes restaient sur les côtés.
                   child: FittedBox(
+                    fit: BoxFit.fill,
                     child: SizedBox.fromSize(
                       size: m.look.size,
                       // Couche à part : l'écran s'anime (menus, Cover Flow,
@@ -329,7 +337,8 @@ class _DeviceBodyState extends State<DeviceBody> {
               Positioned.fromRect(
                 rect: Rect.fromCircle(center: b.center, radius: b.radius),
                 child: _HardButton(
-                  paint: (pressed) => m.buttonPainter(b, pressed: pressed)!,
+                  paint: (pressed, lit) => m.buttonPainter(b, pressed: pressed, lit: lit)!,
+                  lit: widget.lit,
                   onDown: () => _down(b.zone),
                   onUp: () => _up(b.zone),
                   onCancel: _cancelPress,
@@ -388,9 +397,10 @@ class _DeviceBodyState extends State<DeviceBody> {
 /// Bouton rond à part (3e génération) : enfoncé dès qu'on appuie, action
 /// au relâchement (ou appui long), comme les côtés de la molette.
 class _HardButton extends StatefulWidget {
-  const _HardButton({required this.paint, required this.onDown, required this.onUp, required this.onCancel});
+  const _HardButton({required this.paint, this.lit, required this.onDown, required this.onUp, required this.onCancel});
 
-  final CustomPainter Function(bool pressed) paint;
+  final CustomPainter Function(bool pressed, double lit) paint;
+  final ValueListenable<double>? lit;
   final VoidCallback onDown;
   final VoidCallback onUp;
   final VoidCallback onCancel;
@@ -428,7 +438,13 @@ class _HardButtonState extends State<_HardButton> {
         widget.onUp();
       },
       onPointerCancel: (_) => _cancel(),
-      child: CustomPaint(painter: widget.paint(_pressed)),
+      child: switch (widget.lit) {
+        null => CustomPaint(painter: widget.paint(_pressed, 0)),
+        final lit => ValueListenableBuilder<double>(
+            valueListenable: lit,
+            builder: (context, value, _) => CustomPaint(painter: widget.paint(_pressed, value)),
+          ),
+      },
     );
   }
 }

@@ -375,6 +375,26 @@ class Nano5Model extends DeviceModel {
 
 /// Boîtier d'un seul tenant en aluminium anodisé ; [shape] dit comment il
 /// prend la lumière.
+/// Reflet sur l'aluminium anodisé (photo du nano 5G) : sur une couleur, la
+/// lumière s'avive ; sur un gris, elle reste neutre.
+Color _anodizedLight(Color c) {
+  final h = HSLColor.fromColor(c);
+  if (h.saturation < 0.15) return c; // gris : un reflet neutre, sans bleu
+  return h
+      .withSaturation((h.saturation + 0.15).clamp(0.0, 1.0))
+      .withLightness((h.lightness + 0.05).clamp(0.0, 0.8))
+      .toColor();
+}
+
+/// Ombre sur l'aluminium anodisé : sur un gris elle se réchauffe (brun),
+/// sur une couleur elle garde sa teinte, un peu moins saturée.
+Color _anodizedShade(Color c) {
+  final h = HSLColor.fromColor(c);
+  // Plus discret sur un gris clair (argent), où le brun se verrait trop.
+  if (h.saturation < 0.15) return HSLColor.fromAHSL(1, 12, 0.14 * (1 - h.lightness), h.lightness).toColor();
+  return h.withSaturation(h.saturation * 0.85).toColor();
+}
+
 class AnodizedBodyPainter extends CustomPainter {
   const AnodizedBodyPainter(this.color, this.radius, this.screen, {required this.shape});
 
@@ -467,7 +487,10 @@ class AnodizedBodyPainter extends CustomPainter {
         );
       case AluShape.polished:
         // Métal poli : flancs sombres, un liseré de teinte, puis l'ombre, et
-        // le large reflet qui descend à droite du milieu.
+        // le large reflet qui descend à droite du milieu. Anodisé : les
+        // reflets changent de teinte et les ombres aussi (voir [_anodizedLight]).
+        final lit = _anodizedLight(c.light), litBase = _anodizedLight(c.base);
+        final shade = _anodizedShade(c.dark), deep = _anodizedShade(c.deep);
         canvas.drawRect(
           all,
           Paint()
@@ -475,18 +498,18 @@ class AnodizedBodyPainter extends CustomPainter {
               Offset.zero,
               across,
               [
-                c.deep,
+                deep,
+                litBase,
                 c.base,
-                c.base,
-                c.dark,
-                c.dark,
-                mix(c.base, c.light, 0.5),
+                shade,
+                shade,
+                mix(c.base, lit, 0.5),
+                lit,
                 c.light,
-                c.light,
                 c.base,
-                c.dark,
-                mix(c.dark, c.deep, 0.6),
-                mix(c.deep, Colors.black, 0.35),
+                shade,
+                mix(shade, deep, 0.6),
+                mix(deep, Colors.black, 0.35),
               ],
               const [0, 0.03, 0.07, 0.15, 0.26, 0.4, 0.5, 0.74, 0.85, 0.9, 0.945, 1],
             ),

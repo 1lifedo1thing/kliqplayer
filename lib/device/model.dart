@@ -53,9 +53,10 @@ abstract class DeviceModel {
   /// fait rien.
   HoldSwitch? get hold => null;
 
-  /// Boutons séparés de la molette (3e génération), et leur dessin.
+  /// Boutons séparés de la molette (3e génération), et leur dessin ; [lit]
+  /// (0 à 1) : rétroéclairage, allumé comme le voyant de la prise.
   List<DeviceButton> get buttons => const [];
-  CustomPainter? buttonPainter(DeviceButton button, {required bool pressed}) => null;
+  CustomPainter? buttonPainter(DeviceButton button, {required bool pressed, double lit = 0}) => null;
 
   Offset get wheelCenter;
   WheelStyle get wheel;

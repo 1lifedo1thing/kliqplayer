@@ -14,6 +14,53 @@ struct _MyApplication {
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
 
+// Quand Hyprland agrandit d'un coup la fenêtre (d'un quart d'écran à tout
+// l'écran), Flutter met un moment à dessiner à la nouvelle taille ; en
+// attendant, l'ancienne image est répétée en mosaïque (quatre baladeurs quand
+// la fenêtre double). On la rend alors transparente jusqu'à ce que l'appli signale
+// (« drawn » sur kliqplayer/window) qu'une image à la bonne taille est prête.
+static gboolean stale = FALSE;
+static int last_width = 0, last_height = 0;
+static guint stale_timeout = 0;
+
+static gboolean show_again(gpointer view) {
+  stale = FALSE;
+  gtk_widget_set_opacity(GTK_WIDGET(view), 1.0);
+  if (stale_timeout != 0) g_source_remove(stale_timeout);
+  stale_timeout = 0;
+  return G_SOURCE_REMOVE;
+}
+
+static gboolean stale_timeout_cb(gpointer view) {
+  stale_timeout = 0;  // la source se retire d'elle-même
+  return show_again(view);
+}
+
+static void view_size_cb(GtkWidget* view, GdkRectangle* a, gpointer data) {
+  // Les petits pas (redimensionnement à la souris) ne se voient pas : seul un
+  // agrandissement franc cache la fenêtre.
+  if (last_width > 0 && (a->width > last_width * 1.15 || a->height > last_height * 1.15)) {
+    stale = TRUE;
+    // Rendue transparente le temps de redessiner (pas d'interception de
+    // chaque dessin : elle ralentissait tout le rendu).
+    gtk_widget_set_opacity(view, 0.0);
+    if (stale_timeout != 0) g_source_remove(stale_timeout);
+    // Au cas où l'appli ne répond pas : on réaffiche quand même.
+    stale_timeout = g_timeout_add(600, stale_timeout_cb, view);
+  }
+  last_width = a->width;
+  last_height = a->height;
+}
+
+static void window_method_cb(FlMethodChannel* channel, FlMethodCall* call, gpointer view) {
+  if (g_strcmp0(fl_method_call_get_name(call), "drawn") == 0) {
+    if (stale) show_again(view);
+    fl_method_call_respond_success(call, nullptr, nullptr);
+  } else {
+    fl_method_call_respond_not_implemented(call, nullptr);
+  }
+}
+
 // Called when first Flutter frame received.
 static void first_frame_cb(MyApplication* self, FlView* view) {
   gtk_widget_show(gtk_widget_get_toplevel(GTK_WIDGET(view)));
@@ -57,6 +104,12 @@ static void my_application_activate(GApplication* application) {
   gtk_widget_realize(GTK_WIDGET(view));
 
   fl_register_plugins(FL_PLUGIN_REGISTRY(view));
+
+  g_signal_connect(view, "size-allocate", G_CALLBACK(view_size_cb), nullptr);
+  g_autoptr(FlStandardMethodCodec) codec = fl_standard_method_codec_new();
+  FlMethodChannel* channel = fl_method_channel_new(
+      fl_engine_get_binary_messenger(fl_view_get_engine(view)), "kliqplayer/window", FL_METHOD_CODEC(codec));
+  fl_method_channel_set_method_call_handler(channel, window_method_cb, view, nullptr);
 
   gtk_widget_grab_focus(GTK_WIDGET(view));
 }

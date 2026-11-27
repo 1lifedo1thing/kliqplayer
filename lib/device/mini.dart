@@ -53,7 +53,7 @@ class MiniModel extends DeviceModel {
   // ≈ 6,67 unités par mm, comme le Classic.
   static const Size _size = Size(340, 607);
   static const Rect _screen = Rect.fromLTWH(59.5, 54, 221, 176);
-  static const double _radius = 22;
+  static const double _radius = 15;
 
   @override
   String get id => color.gen2 ? 'mini2-${color.name.substring(0, color.name.length - 1)}' : 'mini-${color.name}';
@@ -172,19 +172,6 @@ class _MiniBodyPainter extends CustomPainter {
     );
     paintSatin(canvas, size);
 
-    // Bouchons en plastique blanc en haut et en bas du tube.
-    for (final top in [true, false]) {
-      final cap = top ? Rect.fromLTWH(0, 0, size.width, 5) : Rect.fromLTWH(0, size.height - 5, size.width, 5);
-      canvas.drawRect(
-        cap,
-        Paint()
-          ..shader = ui.Gradient.linear(
-            cap.topLeft,
-            cap.bottomLeft,
-            top ? const [Color(0xFFF2F2F0), Color(0xFFCFD0CE)] : const [Color(0xFFCFD0CE), Color(0xFFE6E6E4)],
-          ),
-      );
-    }
     canvas.restore();
 
     // Fenêtre de l'écran : découpe biseautée dans l'aluminium, puis cadre noir.

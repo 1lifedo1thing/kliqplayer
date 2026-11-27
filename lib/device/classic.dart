@@ -31,18 +31,27 @@ enum ClassicColor {
   final Color swatch;
 }
 
-/// Le Classic (2007) : façade en aluminium anodisé, liseré chromé, écran
-/// couleur 320×240.
+/// Le Classic (2007) : façade en aluminium anodisé sablé, aux bords
+/// arrondis, écran couleur 320×240. Dessiné d'après une photo de face
+/// (485 × 798 px) : les cotes ci-dessous sont celles de la photo, × [_k].
 class ClassicModel extends DeviceModel {
   const ClassicModel([this.color = ClassicColor.argent]);
 
   final ClassicColor color;
 
-  bool get _dark => color == ClassicColor.noir;
+  /// Unités de dessin par pixel de la photo.
+  static const double _k = 412 / 485;
 
-  /// Façade anodisée, plus claire en haut : anthracite pour le noir.
-  List<Color> get _front =>
-      _dark ? const [Color(0xFF615E62), Color(0xFF4C4A4D), Color(0xFF2C2C2D)] : ClassicColor.argent.front;
+  static const Size _size = Size(485 * _k, 798 * _k);
+  static const Rect _screen = Rect.fromLTWH(48 * _k, 49 * _k, 382 * _k, 286 * _k);
+
+  /// Coins bien arrondis, en pixels de la photo.
+  static const double _cornerRadius = 44;
+
+  /// Dessinée avec le boîtier : seuls les appuis se voient.
+  static const WheelStyle _wheel = WheelStyle(radius: 148 * _k, buttonRadius: 53 * _k, labels: false, onBody: true);
+
+  bool get _dark => color == ClassicColor.noir;
 
   // « classic » tout court pour l'argent : les préférences déjà enregistrées
   // restent valables.
@@ -62,13 +71,13 @@ class ClassicModel extends DeviceModel {
   Color get swatch => _dark ? const Color(0xFF4C4A4D) : ClassicColor.argent.swatch;
 
   @override
-  Size get size => G.size;
+  Size get size => _size;
 
   @override
-  double get cornerRadius => G.radius;
+  double get cornerRadius => _cornerRadius * _k;
 
   @override
-  Rect get screen => G.screen;
+  Rect get screen => _screen;
 
   /// En haut à droite (le verrou est à gauche).
   @override
@@ -79,44 +88,19 @@ class ClassicModel extends DeviceModel {
   HoldSwitch? get hold => const HoldSwitch(84, kind: HoldKind.metal);
 
   @override
-  Offset get wheelCenter => G.wheelCenter;
+  Offset get wheelCenter => const Offset(243 * _k, 560 * _k);
 
   @override
-  WheelStyle get wheel => _dark
-      // Molette noire, inscriptions blanches, bouton anthracite creusé.
-      ? const WheelStyle(
-          radius: G.wheelRadius,
-          buttonRadius: G.buttonRadius,
-          label: Color(0xFFECECEE),
-          recess: Color(0xFF111112),
-          ring: [Color(0xFF272728), Color(0xFF222223), Color(0xFF1C1C1D)],
-          edgeLight: 0.1,
-          groove: Color(0xFF0E0E0F),
-          buttonUp: [Color(0xFF333234), Color(0xFF5A575A)],
-          buttonDown: [Color(0xFF262527), Color(0xFF444245)],
-          buttonEdge: 0.1,
-        )
-      // Molette blanche, inscriptions gris bleuté, bouton argent creusé.
-      : const WheelStyle(
-          radius: G.wheelRadius,
-          buttonRadius: G.buttonRadius,
-          label: Color(0xFFB3BBC3),
-          recess: Color(0xFF8E8E90),
-          ring: [Color(0xFFFCFDFE), Color(0xFFF6FAFB), Color(0xFFEAEEF0)],
-          groove: Color(0xFF9A9A9C),
-          buttonUp: [Color(0xFFC0C0C1), Color(0xFFE0E0E1)],
-          buttonDown: [Color(0xFFA9A9AA), Color(0xFFCBCBCC)],
-          buttonEdge: 0.25,
-        );
+  WheelStyle get wheel => _wheel;
 
   @override
   ScreenLook get look => const ClassicLook();
 
   @override
-  CustomPainter get body => BodyPainter(_front, anodized: true, dark: _dark);
+  CustomPainter get body => _ClassicBodyPainter(look.background, dark: _dark);
 
   @override
-  CustomPainter? get glass => const GlassPainter(G.screen, false);
+  CustomPainter? get glass => const _ClassicGlassPainter();
 
   @override
   bool operator ==(Object other) => other is ClassicModel && other._dark == _dark;
@@ -133,7 +117,14 @@ class VideoModel extends DeviceModel {
 
   final ClassicColor color;
 
-  static const Rect _screen = Rect.fromLTWH(45, 34, 322, 242);
+  /// Unités de dessin par pixel de la photo (coin du liseré en 114, 93).
+  static const double _k = 412 / 607;
+
+  static const Size _size = Size(607 * _k, 1013 * _k);
+  static const Rect _screen = Rect.fromLTWH(60 * _k, 54 * _k, 483 * _k, 358 * _k);
+
+  /// Dessinée avec le boîtier : seuls les appuis se voient.
+  static const WheelStyle _wheel = WheelStyle(radius: 190 * _k, buttonRadius: 68 * _k, labels: false, onBody: true);
 
   @override
   String get id => color == ClassicColor.blanc ? 'gen5' : 'gen5-${color.name}';
@@ -151,10 +142,10 @@ class VideoModel extends DeviceModel {
   Color get swatch => color.swatch;
 
   @override
-  Size get size => G.size;
+  Size get size => _size;
 
   @override
-  double get cornerRadius => G.radius;
+  double get cornerRadius => 54 * _k;
 
   @override
   Rect get screen => _screen;
@@ -167,59 +158,19 @@ class VideoModel extends DeviceModel {
   HoldSwitch? get hold => const HoldSwitch(84);
 
   @override
-  Offset get wheelCenter => const Offset(206, 492);
+  Offset get wheelCenter => const Offset(304 * _k, 704 * _k);
 
   @override
-  WheelStyle get wheel => color == ClassicColor.u2
-      // Molette rouge, inscriptions claires, bouton noir.
-      ? const WheelStyle(
-          radius: 122,
-          buttonRadius: 44,
-          label: Color(0xFFF7ECEC),
-          recess: Color(0xFF000000),
-          ring: [Color(0xFFDD0023), Color(0xFFCC001F), Color(0xFFB0001A)],
-          edgeLight: 0.22,
-          groove: Color(0xFF2A0006),
-          buttonUp: [Color(0xFF17151A), Color(0xFF090507)],
-          buttonDown: [Color(0xFF050304), Color(0xFF100D10)],
-          buttonEdge: 0.14,
-        )
-      : color == ClassicColor.noir
-      // Molette noire, à peine plus claire que la façade, bouton noir.
-      ? const WheelStyle(
-          radius: 122,
-          buttonRadius: 44,
-          label: Color(0xFFEDEEEF),
-          recess: Color(0xFF000000),
-          ring: [Color(0xFF22282B), Color(0xFF1B2124), Color(0xFF14191B)],
-          edgeLight: 0.12,
-          groove: Color(0xFF020304),
-          buttonUp: [Color(0xFF14181A), Color(0xFF080C0E)],
-          buttonDown: [Color(0xFF060809), Color(0xFF101315)],
-          buttonEdge: 0.14,
-        )
-      // Molette grise, inscriptions blanches, bouton blanc.
-      : const WheelStyle(
-          radius: 122,
-          buttonRadius: 44,
-          label: Color(0xFFFBFBFC),
-          recess: Color(0xFFDFE0E2),
-          ring: [Color(0xFFCBCFD2), Color(0xFFC2C6CA), Color(0xFFB8BDC1)],
-          edgeLight: 0.5,
-          groove: Color(0xFFADB1B5),
-          buttonUp: [Color(0xFFFAFAFA), Color(0xFFF1F2F2)],
-          buttonDown: [Color(0xFFDDDFE2), Color(0xFFF0F1F2)],
-        );
+  WheelStyle get wheel => _wheel;
 
   @override
   ScreenLook get look => const ClassicLook(ui: ColorUi.video);
 
   @override
-  CustomPainter get body =>
-      BodyPainter(color.front, frameRect: _screen.inflate(6), plastic: true, dark: color != ClassicColor.blanc);
+  CustomPainter get body => _VideoBodyPainter(look.background, color);
 
   @override
-  CustomPainter? get glass => const GlassPainter(_screen);
+  CustomPainter? get glass => const _VideoGlassPainter();
 
   @override
   bool operator ==(Object other) => other is VideoModel && other.color == color;
@@ -228,212 +179,487 @@ class VideoModel extends DeviceModel {
   int get hashCode => color.hashCode;
 }
 
-/// Dimensions du Classic, en unités de dessin (≈ 6,67 unités par mm,
-/// d'après un Classic de 61,8 × 103,5 mm).
-class G {
-  static const Size size = Size(412, 690);
-  static const double radius = 36;
+// --- Boîtier du Classic --------------------------------------------------------
+//
+// Dessiné en pixels de la photo de référence (coin du boîtier en 347, 40),
+// puis mis à l'échelle.
 
-  /// Liseré chromé visible tout autour de la façade.
-  static const double rim = 3;
+const _classicOrigin = Offset(347, 40);
+const _classicBody = Rect.fromLTWH(347, 40, 485, 798);
+const _classicLcd = Rect.fromLTWH(395, 89, 382, 286);
 
-  /// Cadre sombre autour de l'écran, puis l'écran lui-même (4:3).
-  static const Rect screenFrame = Rect.fromLTWH(32, 34, 348, 261);
-  static const Rect screen = Rect.fromLTWH(38, 40, 336, 252);
+Paint _stroke(Color color, double width) => Paint()
+  ..style = PaintingStyle.stroke
+  ..strokeWidth = width
+  ..color = color;
 
-  static const Offset wheelCenter = Offset(206, 498);
-  static const double wheelRadius = 132;
-  static const double buttonRadius = 50;
-}
+/// Aluminium sablé éclairé par la gauche, bords arrondis sans arête, écran
+/// dans son cadre noir, molette et ses inscriptions, bouton central creusé.
+class _ClassicBodyPainter extends CustomPainter {
+  const _ClassicBodyPainter(this.lcd, {required this.dark});
 
-/// Boîtier : ombre portée (il flotte), liseré chromé, façade et cadre
-/// sombre de l'écran.
-class BodyPainter extends CustomPainter {
-  const BodyPainter(this.front, {this.frameRect = G.screenFrame, this.plastic = false, this.anodized = false, this.dark = false});
+  final Color lcd;
 
-  /// Dégradé de la façade, de haut en bas.
-  final List<Color> front;
-
-  /// Façade sombre : le cadre de l'écran s'y fond.
+  /// Aluminium anthracite, molette noire.
   final bool dark;
 
-  /// Façade en aluminium anodisé (Classic) : satinée, sans vernis.
-  final bool anodized;
-
-  /// Cadre sombre autour de l'écran.
-  final Rect frameRect;
-
-  /// Façade en plastique brillant sous une épaisse couche transparente
-  /// (5e génération) : un liseré clair court au ras du chrome.
-  final bool plastic;
+  /// Rendu une fois en image par teinte : sans ça le moteur refait les flous
+  /// et le grain à chaque image de l'écran.
+  /// shortcut: image à 3 × la taille de base, un peu floue au-delà (plein écran sur un écran 5K) ; la rendre à la taille affichée si ça se voit.
+  static final _images = <(Color, bool), ui.Image>{};
+  static const _resolution = 3.0;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final outer = RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(G.radius));
+    paintFloatShadow(
+      canvas,
+      RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(ClassicModel._cornerRadius * size.width / _classicBody.width)),
+      drop: 26,
+      blur: 30,
+    );
+    final image = _images[(lcd, dark)] ??= _render();
+    canvas.drawImageRect(
+      image,
+      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+      Offset.zero & size,
+      Paint()..filterQuality = FilterQuality.medium,
+    );
+  }
 
-    // Ombres : une large et diffuse, une plus serrée sous l'appareil.
-    canvas.drawRRect(
-      outer.shift(const Offset(0, 26)).deflate(10),
-      Paint()
-        ..color = Colors.black.withValues(alpha: 0.32)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 30),
-    );
-    canvas.drawRRect(
-      outer.shift(const Offset(0, 6)),
-      Paint()
-        ..color = Colors.black.withValues(alpha: 0.25)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 7),
-    );
-
-    // Liseré chromé : reflets verticaux comme un métal poli.
-    canvas.drawRRect(
-      outer,
-      Paint()
-        ..shader = ui.Gradient.linear(
-          Offset.zero,
-          Offset(size.width, 0),
-          const [Color(0xFF8C9095), Color(0xFFF7F8F9), Color(0xFFB4B8BC), Color(0xFFE8EAEC), Color(0xFF85898E)],
-          const [0, 0.18, 0.5, 0.82, 1],
-        ),
-    );
-
-    // Façade.
-    final front = outer.deflate(G.rim);
-    canvas.drawRRect(
-      front,
-      Paint()
-        ..shader = ui.Gradient.linear(
-          Offset.zero,
-          Offset(0, size.height),
-          this.front,
-          const [0, 0.45, 1],
-        ),
-    );
-    if (anodized) {
-      canvas.save();
-      canvas.clipRRect(front);
-      // L'aluminium accroche un peu plus la lumière du côté d'où elle vient.
-      canvas.drawRect(
-        Offset.zero & size,
-        Paint()
-          ..shader = ui.Gradient.linear(Offset.zero, Offset(size.width, 0), [
-            Colors.white.withValues(alpha: 0.07),
-            Colors.white.withValues(alpha: 0),
-            Colors.black.withValues(alpha: 0.07),
-          ], const [0, 0.4, 1]),
-      );
-      paintSatin(canvas, size, strength: dark ? 0.6 : 1);
-      canvas.restore();
-      // Chanfrein poli au bord de la façade.
-      canvas.drawRRect(
-        front.deflate(0.75),
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.5
-          ..shader = ui.Gradient.linear(Offset.zero, Offset(0, size.height), [
-            Colors.white.withValues(alpha: dark ? 0.3 : 0.7),
-            Colors.white.withValues(alpha: 0.1),
-            Colors.black.withValues(alpha: 0.2),
-          ], const [0, 0.5, 1]),
-      );
-    } else {
-      // Arrondi de la façade : léger assombrissement au ras du chrome.
-      canvas.drawRRect(
-        front.deflate(1),
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2
-          ..color = Colors.black.withValues(alpha: 0.07),
-      );
+  /// Grain fin de l'aluminium sablé : des points clairs et sombres au hasard.
+  static void _grain(Canvas canvas, Rect area, Path clip, int count) {
+    final random = math.Random(4);
+    final light = <Offset>[], darkDots = <Offset>[];
+    for (var i = 0; i < count; i++) {
+      final p = Offset(area.left + random.nextDouble() * area.width, area.top + random.nextDouble() * area.height);
+      (random.nextBool() ? light : darkDots).add(p);
     }
-    if (plastic) {
-      // L'épaisseur transparente du plastique, qui accroche la lumière.
-      canvas.drawRRect(
-        front.deflate(2.5),
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 3
-          ..shader = ui.Gradient.linear(
-            Offset.zero,
-            Offset(size.width * 0.4, size.height),
-            dark
-                ? [Colors.white.withValues(alpha: 0.28), Colors.white.withValues(alpha: 0.06), Colors.white.withValues(alpha: 0.14)]
-                : [Colors.white.withValues(alpha: 0.75), Colors.white.withValues(alpha: 0.25), Colors.white.withValues(alpha: 0.5)],
-            const [0, 0.5, 1],
-          ),
-      );
-    }
+    canvas.save();
+    canvas.clipPath(clip);
+    final dot = Paint()
+      ..strokeWidth = 0.7
+      ..strokeCap = StrokeCap.round;
+    canvas.drawPoints(ui.PointMode.points, light, dot..color = Colors.white.withValues(alpha: 0.04));
+    canvas.drawPoints(ui.PointMode.points, darkDots, dot..color = Colors.black.withValues(alpha: 0.045));
+    canvas.restore();
+  }
 
-    // Cadre de l'écran.
-    final frame = RRect.fromRectAndRadius(frameRect, const Radius.circular(6));
+  ui.Image _render() {
+    final width = (ClassicModel._size.width * _resolution).round();
+    final height = (ClassicModel._size.height * _resolution).round();
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    canvas.scale(width / _classicBody.width, height / _classicBody.height);
+    canvas.translate(-_classicOrigin.dx, -_classicOrigin.dy);
+
+    // Façade : plus claire à gauche, plus sombre vers la droite et en bas.
+    final body = RRect.fromRectAndRadius(_classicBody, const Radius.circular(ClassicModel._cornerRadius));
     canvas.drawRRect(
-      frame.inflate(1),
+      body,
       Paint()
-        ..color = dark
-            ? const Color(0xFF050506)
-            : anodized
-                ? const Color(0xFF8F8F91)
-                : const Color(0xFFD5D6D8),
+        ..shader = ui.Gradient.linear(const Offset(347, 0), const Offset(832, 0), dark
+            ? const [Color(0xFF46474A), Color(0xFF3E3F42), Color(0xFF36373A), Color(0xFF2F3033), Color(0xFF2A2B2E)]
+            : const [Color(0xFFE0E2E3), Color(0xFFD6D8DA), Color(0xFFC6C8CA), Color(0xFFB7B9BC), Color(0xFFAEB0B3)],
+            const [0, 0.12, 0.45, 0.73, 1]),
     );
-    canvas.drawRRect(frame, Paint()..color = const Color(0xFF1A1C1E));
+    canvas.drawRRect(
+      body,
+      Paint()
+        ..shader = ui.Gradient.linear(const Offset(0, 40), const Offset(0, 838), [
+          for (final a in const [0.04, 0.0, 0.04, 0.16]) Colors.black.withValues(alpha: a),
+        ], const [0, 0.12, 0.7, 1]),
+    );
+    _grain(canvas, _classicBody, Path()..addRRect(body), 60000);
+    // Bords arrondis, sans arête : l'aluminium s'assombrit doucement vers le
+    // bord, sauf à gauche où il prend la lumière.
+    canvas.save();
+    canvas.clipRRect(body);
+    canvas.drawRRect(
+      body,
+      _stroke(const Color(0xFF26272A).withValues(alpha: 0.5), 16)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
+    );
+    // Le reflet s'efface vers le bas au lieu de buter contre le coin.
+    const strip = Rect.fromLTWH(347, 40, 30, 798);
+    canvas.saveLayer(strip.inflate(12), Paint());
+    canvas.drawRect(
+      strip,
+      Paint()
+        ..shader = ui.Gradient.linear(const Offset(347, 0), const Offset(377, 0), [
+          for (final a in dark ? const [0.18, 0.1, 0.0] : const [0.7, 0.45, 0.0]) Colors.white.withValues(alpha: a),
+        ], const [0, 0.55, 1])
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+    );
+    canvas.drawRect(
+      strip.inflate(12),
+      Paint()
+        ..blendMode = BlendMode.dstIn
+        ..shader = ui.Gradient.linear(const Offset(0, 40), const Offset(0, 838), [
+          Colors.white.withValues(alpha: 0.6),
+          Colors.white,
+          Colors.white,
+          Colors.white.withValues(alpha: 0),
+        ], const [0, 0.08, 0.55, 0.9]),
+    );
+    canvas.restore();
+    canvas.restore();
+    canvas.drawRRect(body.deflate(0.5), _stroke(const Color(0xFF2F3032).withValues(alpha: 0.3), 1));
+    // L'arrondi du bord accroche un filet de lumière en haut à gauche.
+    canvas.drawRRect(
+      body.deflate(2),
+      _stroke(Colors.white, 1.6)
+        ..shader = ui.Gradient.linear(const Offset(347, 40), const Offset(832, 838), [
+          Colors.white.withValues(alpha: 0.55),
+          Colors.white.withValues(alpha: 0.12),
+          Colors.white.withValues(alpha: 0),
+        ], const [0, 0.4, 0.6]),
+    );
+
+    // Écran dans son cadre noir, cerclé d'un fin liseré métallique.
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(const Rect.fromLTWH(381, 73, 408, 312), const Radius.circular(7)),
+      _stroke(const Color(0xFF2B2C2E).withValues(alpha: 0.35), 2.5)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5),
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(const Rect.fromLTWH(383, 75, 404, 308), const Radius.circular(6)),
+      Paint()..color = const Color(0xFF0B0B0C),
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(const Rect.fromLTWH(383.5, 75.5, 403, 307), const Radius.circular(5.5)),
+      _stroke(const Color(0xFF9C9D99).withValues(alpha: 0.5), 1),
+    );
+    canvas.drawRect(_classicLcd, Paint()..color = lcd);
+
+    // Molette, légèrement en creux.
+    const c = Offset(590, 600);
+    canvas.drawCircle(
+      c.translate(1, 2),
+      149.5,
+      _stroke(const Color(0xFF2C2D2F).withValues(alpha: 0.35), 3)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5),
+    );
+    canvas.drawCircle(
+      c,
+      148,
+      Paint()
+        ..shader = ui.Gradient.radial(const Offset(590, 560), 190, dark
+            ? const [Color(0xFF2A2B2D), Color(0xFF242527), Color(0xFF1E1F21)]
+            : const [Color(0xFFFAFBFC), Color(0xFFF2F3F5), Color(0xFFE3E5E8)],
+            const [0, 0.75, 1]),
+    );
+    canvas.drawCircle(c, 147.5, _stroke((dark ? Colors.black : const Color(0xFF8E9399)).withValues(alpha: 0.6), 1));
+    final ink = dark ? const Color(0xFFE4E5E8) : const Color(0xFFA3AAB2);
+    final menu = TextPainter(
+      text: TextSpan(
+        text: 'MENU',
+        style: TextStyle(fontFamily: _font, fontSize: 17, fontWeight: FontWeight.w700, letterSpacing: 0.8, color: ink),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    menu.paint(canvas, Offset(590 - menu.width / 2, 485 - menu.computeDistanceToActualBaseline(TextBaseline.alphabetic)));
+    menu.dispose();
+    canvas.drawPath(
+      Path()
+        // ⏮
+        ..addRect(const Rect.fromLTWH(461.5, 595, 2.4, 12))
+        ..addPolygon(const [Offset(464, 601), Offset(472, 595), Offset(472, 607)], true)
+        ..addPolygon(const [Offset(472, 601), Offset(480, 595), Offset(480, 607)], true)
+        // ⏭
+        ..addPolygon(const [Offset(699, 595), Offset(707, 601), Offset(699, 607)], true)
+        ..addPolygon(const [Offset(707, 595), Offset(715, 601), Offset(707, 607)], true)
+        ..addRect(const Rect.fromLTWH(715, 595, 2.4, 12))
+        // ⏯
+        ..addPolygon(const [Offset(579, 719.5), Offset(589, 726), Offset(579, 732.5)], true)
+        ..addRect(const Rect.fromLTWH(592.5, 720, 3, 12))
+        ..addRect(const Rect.fromLTWH(598, 720, 3, 12)),
+      Paint()..color = ink,
+    );
+
+    // Bouton central très légèrement concave : ombre sous le bord en haut à
+    // gauche, lumière en bas à droite.
+    canvas.drawCircle(
+      c,
+      54,
+      _stroke(const Color(0xFF3A3B3D).withValues(alpha: 0.3), 2.5)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5),
+    );
+    final button = Rect.fromCircle(center: c, radius: 53);
+    canvas.drawOval(
+      button,
+      Paint()
+        ..shader = ui.Gradient.radial(const Offset(575, 580), 80, dark
+            ? const [Color(0xFF2E2F31), Color(0xFF252628)]
+            : const [Color(0xFFCDCFD1), Color(0xFFBDBFC2)]),
+    );
+    if (!dark) _grain(canvas, button, Path()..addOval(button), 4000);
+    canvas.drawOval(
+      button,
+      Paint()
+        ..shader = ui.Gradient.linear(const Offset(552, 562), const Offset(628, 638), [
+          Colors.black.withValues(alpha: 0.12),
+          Colors.black.withValues(alpha: 0),
+          Colors.white.withValues(alpha: 0),
+          Colors.white.withValues(alpha: 0.14),
+        ], const [0, 0.45, 0.6, 1]),
+    );
+    canvas.drawCircle(c, 52.6, _stroke(const Color(0xFF6E6F6A).withValues(alpha: 0.5), 1));
+    canvas.drawCircle(
+      c,
+      53.4,
+      _stroke(Colors.white, 1.2)
+        ..shader = ui.Gradient.linear(const Offset(560, 570), const Offset(620, 630), [
+          Colors.white.withValues(alpha: 0),
+          Colors.white.withValues(alpha: 0),
+          Colors.white.withValues(alpha: 0.45),
+        ], const [0, 0.55, 1]),
+    );
+
+    final picture = recorder.endRecording();
+    final image = picture.toImageSync(width, height);
+    picture.dispose();
+    return image;
   }
 
   @override
-  bool shouldRepaint(covariant BodyPainter old) =>
-      old.front != front ||
-      old.frameRect != frameRect ||
-      old.plastic != plastic ||
-      old.anodized != anodized ||
-      old.dark != dark;
+  bool shouldRepaint(covariant _ClassicBodyPainter old) => old.lcd != lcd || old.dark != dark;
 }
 
-/// Reflet de la plaque d'acrylique qui couvre toute la façade ([band] ;
-/// pas sur l'aluminium du Classic, où seule la vitre de l'écran brille).
-class GlassPainter extends CustomPainter {
-  const GlassPainter([this.screen = G.screen, this.band = true]);
-
-  final Rect screen;
-  final bool band;
+/// Filet de lumière en haut de l'écran, par-dessus son contenu.
+class _ClassicGlassPainter extends CustomPainter {
+  const _ClassicGlassPainter();
 
   @override
   void paint(Canvas canvas, Size size) {
-    final front = RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(G.radius)).deflate(G.rim);
-    canvas.save();
-    canvas.clipRRect(front);
-    // Bande de lumière en diagonale sur le haut.
-    final band = Path()
-      ..moveTo(0, 0)
-      ..lineTo(size.width * 0.78, 0)
-      ..lineTo(0, size.height * 0.36)
-      ..close();
-    if (this.band) {
-      canvas.drawPath(
-        band,
-        Paint()
-          ..shader = ui.Gradient.linear(
-            Offset.zero,
-            Offset(size.width * 0.4, size.height * 0.24),
-            [Colors.white.withValues(alpha: 0.22), Colors.white.withValues(alpha: 0.06), Colors.white.withValues(alpha: 0)],
-            const [0, 0.7, 1],
-          ),
-      );
-    }
-    // L'écran sous l'acrylique : très léger voile.
+    final kx = size.width / _classicBody.width, ky = size.height / _classicBody.height;
     canvas.drawRect(
-      screen,
+      Rect.fromLTWH((_classicLcd.left - _classicOrigin.dx) * kx, (_classicLcd.top - _classicOrigin.dy) * ky, _classicLcd.width * kx, 1.5 * ky),
+      Paint()..color = Colors.white.withValues(alpha: 0.35),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter old) => false;
+}
+
+// --- Boîtier de la 5e génération ----------------------------------------------
+//
+// Dessiné en pixels de la photo de référence (coin du liseré en 114, 93), puis
+// mis à l'échelle.
+
+const _videoOrigin = Offset(114, 93);
+const _videoBody = Rect.fromLTWH(114, 93, 607, 1013);
+const _videoFace = Rect.fromLTWH(121.5, 100.5, 592, 998);
+const _videoLcd = Rect.fromLTWH(174, 147, 483, 358);
+
+/// Liseré transparent arrondi (on voit le dos chromé à travers), façade en
+/// plastique brillant, module de l'écran, molette et ses inscriptions, bouton
+/// central.
+class _VideoBodyPainter extends CustomPainter {
+  const _VideoBodyPainter(this.lcd, this.color);
+
+  final Color lcd;
+  final ClassicColor color;
+
+  /// Rendu une fois en image par teinte, comme le Classic.
+  /// shortcut: image à 3 × la taille de base, un peu floue au-delà (plein écran sur un écran 5K) ; la rendre à la taille affichée si ça se voit.
+  static final _images = <(Color, ClassicColor), ui.Image>{};
+  static const _resolution = 3.0;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final outer = RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(54 * size.width / _videoBody.width));
+    // Le liseré est transparent : l'ombre portée ne passe pas dessous.
+    canvas.save();
+    canvas.clipPath(Path()
+      ..fillType = PathFillType.evenOdd
+      ..addRect((Offset.zero & size).inflate(200))
+      ..addRRect(outer));
+    paintFloatShadow(canvas, outer, drop: 26, blur: 30);
+    canvas.restore();
+    final image = _images[(lcd, color)] ??= _render();
+    canvas.drawImageRect(
+      image,
+      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+      Offset.zero & size,
+      Paint()..filterQuality = FilterQuality.medium,
+    );
+  }
+
+  ui.Image _render() {
+    final white = color == ClassicColor.blanc;
+    final width = (VideoModel._size.width * _resolution).round();
+    final height = (VideoModel._size.height * _resolution).round();
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    canvas.scale(width / _videoBody.width, height / _videoBody.height);
+    canvas.translate(-_videoOrigin.dx, -_videoOrigin.dy);
+
+    // Liseré transparent : un filet de lumière dehors, un autre très léger dedans.
+    final rim = RRect.fromRectAndRadius(_videoBody, const Radius.circular(54));
+    canvas.drawRRect(
+      rim,
       Paint()
-        ..shader = ui.Gradient.linear(
-          screen.topLeft,
-          screen.bottomLeft,
-          [Colors.white.withValues(alpha: 0.10), Colors.white.withValues(alpha: 0.0)],
-          const [0, 0.5],
-        ),
+        ..shader = ui.Gradient.linear(const Offset(0, 93), const Offset(0, 1106), [
+          const Color(0xFFA0A0A0).withValues(alpha: 0.6),
+          const Color(0xFF7A7A7A).withValues(alpha: 0.5),
+          const Color(0xFF8C8C8C).withValues(alpha: 0.58),
+        ], const [0, 0.5, 1]),
+    );
+    canvas.drawRRect(rim.deflate(0.5), _stroke(const Color(0xFFE2E2E2).withValues(alpha: 0.7), 1.2));
+    canvas.drawRRect(rim.deflate(2), _stroke(Colors.white.withValues(alpha: 0.18), 1));
+    canvas.drawRRect(rim.deflate(5), _stroke(const Color(0xFF202020).withValues(alpha: 0.6), 1.5));
+
+    // Façade : un peu plus claire en haut (reflet du plafond), plus sombre en bas.
+    final face = RRect.fromRectAndRadius(_videoFace, const Radius.circular(47.5));
+    canvas.drawRRect(
+      face,
+      Paint()
+        ..shader = ui.Gradient.linear(const Offset(0, 98), const Offset(0, 1101), white
+            ? const [Color(0xFFFAFAF9), Color(0xFFF4F4F3), Color(0xFFEFEFEE), Color(0xFFE4E5E4)]
+            : const [Color(0xFF2B2B2B), Color(0xFF1D1D1D), Color(0xFF171717), Color(0xFF0E0E0E)],
+            const [0, 0.04, 0.5, 1]),
+    );
+    canvas.drawRRect(
+      face,
+      Paint()
+        ..shader = ui.Gradient.linear(const Offset(121.5, 0), const Offset(713.5, 0), white
+            ? [Colors.white.withValues(alpha: 0.3), Colors.white.withValues(alpha: 0), Colors.black.withValues(alpha: 0), Colors.black.withValues(alpha: 0.04)]
+            : [Colors.white.withValues(alpha: 0.035), Colors.white.withValues(alpha: 0), Colors.white.withValues(alpha: 0), Colors.white.withValues(alpha: 0.04)],
+            const [0, 0.15, 0.85, 1]),
+    );
+    canvas.drawRRect(
+      face.deflate(0.5),
+      _stroke((white ? const Color(0xFF8E9194) : Colors.black).withValues(alpha: 0.6), 1),
+    );
+    // Bord bombé : un reflet doux (une ombre sur le blanc) suit l'arrondi.
+    canvas.save();
+    canvas.clipRRect(face);
+    canvas.drawRRect(
+      face,
+      _stroke(white ? Colors.black.withValues(alpha: 0.06) : Colors.white.withValues(alpha: 0.1), 10)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+    );
+    canvas.restore();
+
+    // Écran : le module gris foncé se voit autour, sous la façade.
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(const Rect.fromLTWH(162, 135, 507, 381), const Radius.circular(9)),
+      Paint()..color = const Color(0xFF3C3C3C),
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(const Rect.fromLTWH(164, 137, 503, 377), const Radius.circular(8)),
+      _stroke(const Color(0xFF4C4C4C), 2),
+    );
+    canvas.drawRect(_videoLcd, Paint()..color = lcd);
+
+    // Molette : grise sur le blanc, noire mate sur le noir, rouge sur l'U2.
+    const c = Offset(418, 797);
+    canvas.drawCircle(
+      c,
+      191,
+      _stroke(Colors.black.withValues(alpha: white ? 0.15 : 0.5), 3)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5),
+    );
+    canvas.drawCircle(
+      c,
+      190,
+      Paint()
+        ..shader = ui.Gradient.radial(const Offset(418, 740), 230, switch (color) {
+          ClassicColor.u2 => const [Color(0xFFD8002A), Color(0xFFB0001A)],
+          ClassicColor.blanc => const [Color(0xFFCBCED1), Color(0xFFBDC0C4)],
+          _ => const [Color(0xFF191919), Color(0xFF111111)],
+        }),
+    );
+    canvas.drawCircle(
+      c,
+      189,
+      _stroke(switch (color) {
+        ClassicColor.u2 => const Color(0xFF6E0010).withValues(alpha: 0.7),
+        ClassicColor.blanc => const Color(0xFFA9ACB0).withValues(alpha: 0.7),
+        _ => const Color(0xFF2C2C2C).withValues(alpha: 0.7),
+      }, 1.4),
+    );
+    final ink = switch (color) {
+      ClassicColor.u2 => const Color(0xFFF7ECEC),
+      ClassicColor.blanc => const Color(0xFFFBFBFC),
+      _ => const Color(0xFFC9C7C2),
+    };
+    final menu = TextPainter(
+      text: TextSpan(
+        text: 'MENU',
+        style: TextStyle(fontFamily: _font, fontSize: 23, fontWeight: FontWeight.w700, letterSpacing: 1, color: ink),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    menu.paint(canvas, Offset(418 - menu.width / 2, 644 - menu.computeDistanceToActualBaseline(TextBaseline.alphabetic)));
+    menu.dispose();
+    final inkPaint = Paint()..color = ink;
+    void icon(Offset at, Path path) {
+      canvas.save();
+      canvas.translate(at.dx, at.dy);
+      canvas.scale(1.12);
+      canvas.drawPath(path, inkPaint);
+      canvas.restore();
+    }
+
+    icon(const Offset(268, 798), Path()
+      ..addRect(const Rect.fromLTWH(-14, -8.5, 3.4, 17))
+      ..addPolygon(const [Offset(-10.6, 0), Offset(0, -8.5), Offset(0, 8.5)], true)
+      ..addPolygon(const [Offset(0, 0), Offset(10.6, -8.5), Offset(10.6, 8.5)], true));
+    icon(const Offset(570, 797), Path()
+      ..addPolygon(const [Offset(-10.6, -8.5), Offset(0, 0), Offset(-10.6, 8.5)], true)
+      ..addPolygon(const [Offset(0, -8.5), Offset(10.6, 0), Offset(0, 8.5)], true)
+      ..addRect(const Rect.fromLTWH(10.6, -8.5, 3.4, 17)));
+    icon(const Offset(422, 958), Path()
+      ..addPolygon(const [Offset(-16, -9), Offset(-2, 0), Offset(-16, 9)], true)
+      ..addRect(const Rect.fromLTWH(2.5, -8.5, 4.2, 17))
+      ..addRect(const Rect.fromLTWH(10, -8.5, 4.2, 17)));
+
+    // Bouton central, même plastique que la façade, cerclé d'une fine rainure.
+    const center = Offset(420, 797);
+    canvas.drawCircle(center, 68, Paint()..color = white ? const Color(0xFFF7F7F6) : const Color(0xFF151515));
+    canvas.drawCircle(center, 68, _stroke(white ? const Color(0xFFB4B7BA) : const Color(0xFF2E2E2E), 1.6));
+    canvas.drawCircle(
+      center.translate(0, 1),
+      66.6,
+      _stroke((white ? const Color(0xFF8E9194) : Colors.black).withValues(alpha: white ? 0.25 : 0.6), 1.2),
+    );
+
+    final picture = recorder.endRecording();
+    final image = picture.toImageSync(width, height);
+    picture.dispose();
+    return image;
+  }
+
+  @override
+  bool shouldRepaint(covariant _VideoBodyPainter old) => old.lcd != lcd || old.color != color;
+}
+
+/// Par-dessus l'écran : filet de lumière en haut de l'écran et très léger
+/// reflet en biais de la couche transparente sur toute la façade.
+class _VideoGlassPainter extends CustomPainter {
+  const _VideoGlassPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.save();
+    canvas.scale(size.width / _videoBody.width, size.height / _videoBody.height);
+    canvas.translate(-_videoOrigin.dx, -_videoOrigin.dy);
+    canvas.drawRect(
+      Rect.fromLTWH(_videoLcd.left, _videoLcd.top, _videoLcd.width, 1.5),
+      Paint()..color = Colors.white.withValues(alpha: 0.35),
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(_videoFace, const Radius.circular(47.5)),
+      Paint()
+        ..shader = ui.Gradient.linear(const Offset(119, 98), const Offset(716, 700), [
+          Colors.white.withValues(alpha: 0.09),
+          Colors.white.withValues(alpha: 0.025),
+          Colors.white.withValues(alpha: 0),
+          Colors.white.withValues(alpha: 0),
+        ], const [0, 0.42, 0.43, 1]),
     );
     canvas.restore();
   }
 
   @override
-  bool shouldRepaint(covariant GlassPainter old) => old.screen != screen || old.band != band;
+  bool shouldRepaint(covariant CustomPainter old) => false;
 }
 
 // --- Écran -------------------------------------------------------------------

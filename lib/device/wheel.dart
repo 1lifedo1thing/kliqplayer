@@ -88,6 +88,9 @@ class WheelStyle {
   final double? innerRadius;
   final List<Color> inner;
 
+  /// L'anneau mécanique se voit tourner (pas quand il est dessiné avec le boîtier).
+  bool get spins => innerRadius != null && turns && !onBody;
+
   /// Distance des inscriptions au centre, en fraction du rayon (par défaut
   /// celle du Classic ; plus loin sur une molette mécanique).
   final double? labelInset;
@@ -112,7 +115,11 @@ class WheelPainter extends CustomPainter {
     final r = s.radius;
     final b = s.buttonRadius;
     if (s.onBody) {
-      if (pressed == WheelZone.center) canvas.drawCircle(c, b, Paint()..color = Colors.black.withValues(alpha: 0.06));
+      final dim = Paint()..color = Colors.black.withValues(alpha: 0.06);
+      if (pressed == WheelZone.center) canvas.drawCircle(c, b, dim);
+      if (s.sideClicks && pressed != WheelZone.none && pressed != WheelZone.center) {
+        canvas.drawPath(_sector(c, r, s.innerRadius ?? b + 4), dim);
+      }
       return;
     }
 
@@ -138,18 +145,8 @@ class WheelPainter extends CustomPainter {
 
     // Zone appuyée.
     if (pressed != WheelZone.none && pressed != WheelZone.center) {
-      final mid = switch (pressed) {
-        WheelZone.menu => -math.pi / 2,
-        WheelZone.next => 0.0,
-        WheelZone.playPause => math.pi / 2,
-        _ => math.pi,
-      };
-      final sector = Path()
-        ..addArc(Rect.fromCircle(center: c, radius: r), mid - math.pi / 4, math.pi / 2)
-        ..arcTo(Rect.fromCircle(center: c, radius: b + 4), mid + math.pi / 4, -math.pi / 2, false)
-        ..close();
       canvas.drawPath(
-        sector,
+        _sector(c, r, b + 4),
         Paint()
           ..shader = ui.Gradient.radial(
             c,
@@ -190,6 +187,20 @@ class WheelPainter extends CustomPainter {
         ..color = Colors.white.withValues(alpha: down ? s.buttonEdge / 3 : s.buttonEdge),
     );
     if (s.shuffle && s.labels) _playPause(canvas, c.translate(1.5 * s.iconScale, 0), Paint()..color = s.centerLabel ?? s.label);
+  }
+
+  /// Quart de molette du côté appuyé, entre les rayons [inner] et [outer].
+  Path _sector(Offset c, double outer, double inner) {
+    final mid = switch (pressed) {
+      WheelZone.menu => -math.pi / 2,
+      WheelZone.next => 0.0,
+      WheelZone.playPause => math.pi / 2,
+      _ => math.pi,
+    };
+    return Path()
+      ..addArc(Rect.fromCircle(center: c, radius: outer), mid - math.pi / 4, math.pi / 2)
+      ..arcTo(Rect.fromCircle(center: c, radius: inner), mid + math.pi / 4, -math.pi / 2, false)
+      ..close();
   }
 
   /// + − ⏮ ⏭ autour de l'anneau d'un shuffle.
@@ -428,7 +439,7 @@ class _DeviceWheelState extends State<DeviceWheel> {
     var delta = a - last;
     if (delta > math.pi) delta -= 2 * math.pi;
     if (delta < -math.pi) delta += 2 * math.pi;
-    if (_s.innerRadius != null && _s.turns) setState(() => _rotation += delta);
+    if (_s.spins) setState(() => _rotation += delta);
     // L'anneau d'un shuffle ne se tourne pas : seulement des boutons.
     if (_s.shuffle) return;
     _accum += delta;
@@ -450,7 +461,7 @@ class _DeviceWheelState extends State<DeviceWheel> {
       onPointerSignal: (e) {
         if (e is PointerScrollEvent && e.scrollDelta.dy != 0) {
           final dir = e.scrollDelta.dy > 0 ? 1 : -1;
-          if (_s.innerRadius != null && _s.turns) setState(() => _rotation += dir * _step);
+          if (_s.spins) setState(() => _rotation += dir * _step);
           widget.onScroll(dir);
         }
       },

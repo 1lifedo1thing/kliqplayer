@@ -87,6 +87,7 @@ Future<void> _drag(WidgetTester tester, Offset from, Offset by, {Duration over =
 }
 
 void main() {
+  wheelHidesHandles();
   testWidgets('rangé, il est caché derrière l\'baladeur', (tester) async {
     await _show(tester);
     expect(_stowed(tester), isTrue);
@@ -672,4 +673,45 @@ Future<(Finder, TestGesture)> _hoverTopSlot(WidgetTester tester, Size window, De
   await mouse.addPointer(location: Offset.zero);
   await mouse.moveTo(tester.getCenter(slot));
   return (slot, mouse);
+}
+
+/// Opacité de la poignée de droite (0 : cachée derrière le coin).
+double _handleOpacity(WidgetTester tester) {
+  final handles = find.byWidgetPredicate(
+      (w) => w is Opacity && w.child is CustomPaint && (w.child as CustomPaint).painter.runtimeType.toString() == '_HandlePainter');
+  final right = handles.evaluate().map((e) => e.widget as Opacity).toList();
+  return right.map((o) => o.opacity).reduce(math.max);
+}
+
+void wheelHidesHandles() {
+  testWidgets('la souris sur la molette : les poignées restent cachées', (tester) async {
+    tester.view
+      ..physicalSize = _window
+      ..devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final model = Shuffle2Model(shuffle2Colors.first);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Material(
+          type: MaterialType.transparency,
+          child: DeviceStage(player: PlayerController.preview(), initial: model),
+        ),
+      ),
+    );
+    await _settle(tester);
+    final d = _device(tester), k = d.width / model.size.width;
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    addTearDown(mouse.removePointer);
+    await mouse.addPointer(location: Offset.zero);
+    // Le coin du haut à droite, sur la façade mais hors de la molette : la poignée sort.
+    await mouse.moveTo(Offset(d.right - 4, d.top + model.cornerRadius * k + 14));
+    await _settle(tester);
+    final wheel = d.topLeft + model.wheelCenter * k;
+    final onWheel = (Offset(d.right - 4, d.top + model.cornerRadius * k + 14) - wheel).distance <= model.wheel.radius * k + 8;
+    if (!onWheel) expect(_handleOpacity(tester), greaterThan(0.9));
+    // Sur la molette, au plus près du coin : plus de poignée.
+    await mouse.moveTo(wheel + Offset(1, -1) / math.sqrt2 * (model.wheel.radius * k - 2));
+    await _settle(tester);
+    expect(_handleOpacity(tester), 0);
+  });
 }

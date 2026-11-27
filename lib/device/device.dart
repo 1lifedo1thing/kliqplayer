@@ -6,6 +6,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -169,6 +170,23 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
   final _peekL = Spring(0, stiffness: 420, damping: 0.9);
   final _peekR = Spring(0, stiffness: 420, damping: 0.9);
   int _hoverSide = 0;
+
+  /// La souris est sur la molette : les poignées du tiroir (et les boutons
+  /// de déplacement dessous) restent cachées et ne prennent pas les clics (sur les petits modèles, la molette est
+  /// tout près des coins).
+  bool _overWheel = false;
+
+  /// La molette à l'écran (centre et rayon), relevée à chaque construction.
+  Offset _wheelAt = Offset.zero;
+  double _wheelRadius = 0;
+
+  void _trackWheel(Offset pointer) {
+    // Un peu de marge autour : on vise souvent le bord de la molette.
+    final over = (pointer - _wheelAt).distance <= _wheelRadius + 8;
+    if (over == _overWheel) return;
+    setState(() => _overWheel = over);
+    _kick();
+  }
   bool _wantOpen = false;
 
   // --- Place du baladeur dans la fenêtre : à gauche, au milieu, à droite -------
@@ -435,10 +453,14 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
   /// Durée du fondu du voyant.
   static const _glowTime = 0.2;
 
+  /// Le même éclat, adouci, pour les boutons rétroéclairés (3e génération).
+  late final _lit = ValueNotifier(_glow);
+
   void _stepGlow(double dt) {
     final target = _focused ? 1.0 : 0.0;
     if (_glow < target) _glow = math.min(target, _glow + dt / _glowTime);
     if (_glow > target) _glow = math.max(target, _glow - dt / _glowTime);
+    _lit.value = Curves.easeInOut.transform(_glow);
   }
 
   /// Ballant du câble, relancé quand l'appareil bouge.
@@ -496,6 +518,7 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
     deviceLanded.removeListener(_landed);
     deviceFree.removeListener(_freeChanged);
     _focusWatch.dispose();
+    _lit.dispose();
     _liveTimer?.cancel();
     _dragSettle?.cancel();
     _refit?.cancel();
@@ -549,13 +572,13 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
     for (final (peek, side) in [(_peekL, -1), (_peekR, 1)]) {
       // Les deux boutons d'un coin sortent ensemble, quel que soit celui
       // qu'on approche.
-      final near = _hoverSide == side || _hoverMove == side;
+      final near = (_hoverSide == side || _hoverMove == side) && !_overWheel;
       final target = near && !_wantOpen && !_dragging ? 1.0 : 0.0;
       peek.step(target, dt);
       if (peek.isSettled) peek.value = target;
     }
     for (final (peek, side) in [(_movePeekL, -1), (_movePeekR, 1)]) {
-      final near = _hoverSide == side || _hoverMove == side;
+      final near = (_hoverSide == side || _hoverMove == side) && !_overWheel;
       final target = near && _canMove(side) && !_dragging ? 1.0 : 0.0;
       peek.step(target, dt);
       if (peek.isSettled) peek.value = target;
@@ -1193,25 +1216,31 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
   /// le baladeur garde ainsi presque toute sa taille.
   double _cableRoom(double h) => _full != null ? math.min(h * 0.2, 110) : h * 0.2;
 
+  /// Taille des poignées (tiroir, déplacement) : elles suivent l'appareil quand
+  /// il rapetisse à l'écran, sans descendre sous la moitié de leur taille
+  /// (elles resteraient sinon trop petites à viser).
+  double _tabScale(Rect dev) => (dev.height / _model.size.height).clamp(0.5, 1.0);
+
   /// Poignée cachée derrière un coin du haut de l'appareil [dev] : quand la
   /// souris approche de ce coin, elle glisse dehors ; cliquée ou tirée, le
   /// tiroir sort de ce côté. Tiroir ouvert, elle n'a plus lieu d'être.
   Widget _handle(int side, Rect dev, double corner, double openC) {
     final peek = (side < 0 ? _peekL : _peekR).value;
-    const width = 40.0, height = 46.0, reach = 22.0;
+    final k = _tabScale(dev);
+    final width = 40.0 * k, height = 46.0 * k, reach = 22.0 * k;
     // Zone sensible bien au-delà du flanc, même quand on ne voit rien : au
     // dessus de la poignée, et en dessous jusqu'à mi-chemin du bouton de
     // déplacement (qui prend la suite, voir [_moveHandle]).
-    const zone = 60.0, above = 24.0, below = 4.0;
+    final zone = 60.0 * k, above = 24.0 * k, below = 4.0 * k;
     final out = peek * reach;
-    final top = dev.top + corner + 10;
+    final top = dev.top + corner + 10 * k;
     return Positioned(
       left: side > 0 ? dev.right - width : dev.left - zone,
       top: top - above,
       width: width + zone,
       height: above + height + below,
       child: IgnorePointer(
-        ignoring: openC > 0.05,
+        ignoring: openC > 0.05 || _overWheel,
         child: MouseRegion(
           cursor: SystemMouseCursors.click,
           onEnter: (_) => _setHoverSide(side, true),
@@ -1250,10 +1279,11 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
     final peek = (side < 0 ? _movePeekL : _movePeekR).value;
     // Zone sensible : même largeur que celle de la poignée du tiroir, depuis
     // la fin de la sienne (mi-écart) jusqu'un peu sous le bouton.
-    const width = 40.0, height = 30.0, reach = 22.0, zone = 60.0, above = 4.0, below = 20.0;
+    final k = _tabScale(dev);
+    final width = 40.0 * k, height = 30.0 * k, reach = 22.0 * k, zone = 60.0 * k, above = 4.0 * k, below = 20.0 * k;
     final out = peek * reach;
     // Sous la poignée du tiroir (46 de haut), avec un petit écart.
-    final top = dev.top + corner + 10 + 46 + 8;
+    final top = dev.top + corner + (10 + 46 + 8) * k;
     final active = _canMove(side) && openC < 0.05;
     return Positioned(
       left: side > 0 ? dev.right - width : dev.left - zone,
@@ -1261,7 +1291,7 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
       width: width + zone,
       height: above + height + below,
       child: IgnorePointer(
-        ignoring: openC > 0.05,
+        ignoring: openC > 0.05 || _overWheel,
         child: MouseRegion(
           cursor: active ? SystemMouseCursors.click : MouseCursor.defer,
           onEnter: (_) => _setHoverMove(side, true),
@@ -1294,8 +1324,9 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
   /// un peu sur l'écran : la souris qui y passe fait sortir les poignées de
   /// ce coin. Survol seulement, les clics vont toujours au baladeur.
   List<Widget> _hoverInside(int side, Rect dev, double corner, double openC) {
-    const inside = 72.0;
-    final top = dev.top + corner + 10;
+    final k = _tabScale(dev);
+    final inside = 72.0 * k;
+    final top = dev.top + corner + 10 * k;
     Widget region(double from, double to, void Function(int, bool) hover) => Positioned(
           left: side > 0 ? dev.right - inside : dev.left,
           top: from,
@@ -1313,8 +1344,8 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
         );
     // Mêmes bornes verticales que [_handle] et [_moveHandle].
     return [
-      region(top - 24, top + 50, _setHoverSide),
-      region(top + 50, top + 104, _setHoverMove),
+      region(top - 24 * k, top + 50 * k, _setHoverSide),
+      region(top + 50 * k, top + 104 * k, _setHoverMove),
     ];
   }
 
@@ -1356,6 +1387,7 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
                         model: _model,
                         player: widget.player,
                         nav: _nav,
+                        lit: _lit,
                         onWindowDrag: _beginWindowDrag,
                         onHoldBegin: _holdBegin,
                         onHoldUpdate: _holdUpdate,
@@ -1400,6 +1432,9 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
           final c = Offset(w / 2, h / 2);
           Offset place(Offset p) => c + (p - c) * scale + Offset(shift, 0);
           final dev = Rect.fromPoints(place(g.device.topLeft), place(g.device.bottomRight));
+          final k = dev.width / _model.size.width;
+          _wheelAt = dev.topLeft + _model.wheelCenter * k;
+          _wheelRadius = _model.wheel.radius * k;
           _stageSize = Size(w, h);
           // Tenu : son centre suit le pointeur. Lâché à l'instant, et la
           // fenêtre a pris sa taille : il part d'où on l'a posé.
@@ -1494,7 +1529,12 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
             offset: back,
             child: IgnorePointer(
             ignoring: _phase != _Swap.none,
-            child: Stack(
+            child: MouseRegion(
+              opaque: false,
+              hitTestBehavior: HitTestBehavior.translucent,
+              onHover: (e) => _trackWheel(e.localPosition),
+              onExit: (_) => _trackWheel(const Offset(double.infinity, 0)),
+              child: Stack(
               key: _stageKey,
               children: [
                 // Un clic à côté du tiroir le referme. Toujours là (inactif
@@ -1544,6 +1584,7 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
                   ),
                 ),
               ],
+            ),
             ),
             ),
           );

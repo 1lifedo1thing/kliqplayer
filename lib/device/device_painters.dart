@@ -124,6 +124,11 @@ class _HandlePainter extends CustomPainter {
         ..translate(size.width, 0)
         ..scale(-1, 1);
     }
+    // Dessinée pour 40 de large : réduite avec l'appareil, tout rapetisse
+    // ensemble (arrondis, ombre, encoche).
+    final k = size.width / 40;
+    canvas.scale(k);
+    size = size / k;
     final r = Offset.zero & size;
     final shape = RRect.fromRectAndCorners(
       r,

@@ -20,14 +20,27 @@ const _chicagoLook = MiniLook(size: Size(160, 128), visibleRows: 6, font: 'Chica
 const _chicagoRatedLook = MiniLook(size: Size(160, 128), visibleRows: 6, font: 'ChicagoFLF');
 
 /// La 1re génération (2001) : molette mécanique qui tourne vraiment,
-/// entourée de quatre boutons, écran monochrome, façade blanche.
+/// entourée de quatre boutons, écran monochrome, façade blanche sous un
+/// plexi transparent. Dessinée d'après une photo de face (274 × 462 px) :
+/// les cotes ci-dessous sont celles de la photo, × [_k].
 class FirstGenModel extends DeviceModel {
   const FirstGenModel();
 
-  // ≈ 6,67 unités par mm (61,8 × 102 mm).
-  static const Size _size = Size(412, 680);
-  static const Rect _screen = Rect.fromLTWH(76, 44, 260, 208);
-  static const double _radius = 34;
+  /// Unités de dessin par pixel de la photo.
+  static const double _k = 412 / 274;
+
+  static const Size _size = Size(274 * _k, 462 * _k);
+  static const Rect _screen = Rect.fromLTWH(52.5 * _k, 29 * _k, 173 * _k, 139.5 * _k);
+
+  /// Anneau des quatre boutons, disque qui tourne, bouton central (molette
+  /// réduite à 97 % sur la photo).
+  static const WheelStyle _wheel = WheelStyle(
+    radius: 120 * 0.97 * _k,
+    buttonRadius: 33.5 * 0.97 * _k,
+    innerRadius: 94 * 0.97 * _k,
+    labels: false,
+    onBody: true,
+  );
 
   @override
   String get id => 'gen1';
@@ -48,7 +61,7 @@ class FirstGenModel extends DeviceModel {
   Size get size => _size;
 
   @override
-  double get cornerRadius => _radius;
+  double get cornerRadius => 27 * _k;
 
   @override
   Rect get screen => _screen;
@@ -59,23 +72,11 @@ class FirstGenModel extends DeviceModel {
   double get jackX => 212;
 
   @override
-  Offset get wheelCenter => const Offset(206, 461);
+  Offset get wheelCenter => const Offset(138 * _k, 310 * _k);
 
+  /// Dessinée avec le boîtier : seuls les appuis se voient.
   @override
-  WheelStyle get wheel => const WheelStyle(
-        radius: 172,
-        buttonRadius: 49,
-        innerRadius: 138,
-        labelInset: 0.9,
-        labelSize: 15,
-        menuLabel: 'menu',
-        labelSpacing: 1,
-        iconScale: 0.75,
-        label: Color(0xFF9A9EA3),
-        ring: [Color(0xFFF9F9FA), Color(0xFFF0F1F2), Color(0xFFE4E6E8)],
-        inner: [Color(0xFFFBFBFC), Color(0xFFEEEFF1), Color(0xFFDFE1E4)],
-        groove: Color(0xFFB9BCC0),
-      );
+  WheelStyle get wheel => _wheel;
 
   /// En haut à droite.
   @override
@@ -85,10 +86,10 @@ class FirstGenModel extends DeviceModel {
   ScreenLook get look => _chicagoLook;
 
   @override
-  CustomPainter get body => const _WhiteBodyPainter(_size, _radius, _screen);
+  CustomPainter get body => _FirstGenBodyPainter(_chicagoLook.background);
 
   @override
-  CustomPainter? get glass => const _GlassPainter(_size, _radius, _screen);
+  CustomPainter? get glass => const _FirstGenGlassPainter();
 }
 
 /// La 2e génération (2002) : même boîtier que la première, mais la molette
@@ -96,10 +97,6 @@ class FirstGenModel extends DeviceModel {
 /// boutons.
 class SecondGenModel extends DeviceModel {
   const SecondGenModel();
-
-  static const Size _size = FirstGenModel._size;
-  static const Rect _screen = FirstGenModel._screen;
-  static const double _radius = FirstGenModel._radius;
 
   @override
   String get id => 'gen2';
@@ -117,13 +114,13 @@ class SecondGenModel extends DeviceModel {
   Color get swatch => const Color(0xFFF7F7F5);
 
   @override
-  Size get size => _size;
+  Size get size => FirstGenModel._size;
 
   @override
-  double get cornerRadius => _radius;
+  double get cornerRadius => 27 * FirstGenModel._k;
 
   @override
-  Rect get screen => _screen;
+  Rect get screen => FirstGenModel._screen;
 
   /// Au milieu de la tranche du haut, à côté de la prise télécommande ; le
   /// port FireWire (sous son volet) à gauche, le verrou à droite.
@@ -131,26 +128,10 @@ class SecondGenModel extends DeviceModel {
   double get jackX => 200;
 
   @override
-  Offset get wheelCenter => const Offset(206, 461);
+  Offset get wheelCenter => const FirstGenModel().wheelCenter;
 
-  /// Surface tactile lisse et fixe, un peu plus claire que la molette
-  /// mécanique.
   @override
-  WheelStyle get wheel => const WheelStyle(
-        radius: 172,
-        buttonRadius: 49,
-        innerRadius: 138,
-        turns: false,
-        labelInset: 0.9,
-        labelSize: 15,
-        menuLabel: 'menu',
-        labelSpacing: 1,
-        iconScale: 0.75,
-        label: Color(0xFF9A9EA3),
-        ring: [Color(0xFFF9F9FA), Color(0xFFF0F1F2), Color(0xFFE4E6E8)],
-        inner: [Color(0xFFFDFDFD), Color(0xFFF3F4F5), Color(0xFFE6E8EA)],
-        groove: Color(0xFFC3C6CA),
-      );
+  WheelStyle get wheel => FirstGenModel._wheel;
 
   @override
   HoldSwitch? get hold => const HoldSwitch(330);
@@ -159,10 +140,10 @@ class SecondGenModel extends DeviceModel {
   ScreenLook get look => _chicagoLook;
 
   @override
-  CustomPainter get body => const _WhiteBodyPainter(_size, _radius, _screen);
+  CustomPainter get body => _FirstGenBodyPainter(_chicagoLook.background);
 
   @override
-  CustomPainter? get glass => const _GlassPainter(_size, _radius, _screen);
+  CustomPainter? get glass => const _FirstGenGlassPainter();
 }
 
 /// La 3e génération (2003) : molette tactile sans inscriptions, quatre
@@ -227,8 +208,8 @@ class ThirdGenModel extends DeviceModel {
   HoldSwitch? get hold => const HoldSwitch(82);
 
   @override
-  CustomPainter buttonPainter(DeviceButton button, {required bool pressed}) =>
-      _ThirdGenButtonPainter(button.zone, pressed);
+  CustomPainter buttonPainter(DeviceButton button, {required bool pressed, double lit = 0}) =>
+      _ThirdGenButtonPainter(button.zone, pressed, lit);
 
   @override
   ScreenLook get look => _chicagoRatedLook;
@@ -262,7 +243,9 @@ class FourthGenModel extends DeviceModel {
   // ≈ 6,67 unités par mm (61 × 104,1 mm).
   static const Size _size = Size(407, 694);
   static const Rect _screen = Rect.fromLTWH(70, 50, 267, 214);
-  static const double _radius = 28;
+
+  /// Celui du boîtier du 3G, qu'il reprend.
+  static const double _radius = 30 * 407 / 267;
 
   @override
   String get id => color == FourthGenColor.blanc ? 'gen4' : 'gen4-${color.name}';
@@ -332,18 +315,12 @@ class FourthGenModel extends DeviceModel {
 
   @override
   CustomPainter get body => switch (color) {
-    FourthGenColor.blanc => const _WhiteBodyPainter(_size, _radius, _screen),
-    FourthGenColor.u2 => const _WhiteBodyPainter(
-      _size,
-      _radius,
-      _screen,
-      front: _black,
-      dark: true,
-    ),
+    FourthGenColor.blanc => _CasingBodyPainter(_size, _screen, _monoLook.background, wheelCenter, 140),
+    FourthGenColor.u2 => _CasingBodyPainter(_size, _screen, _monoLook.background, wheelCenter, 140, dark: true),
   };
 
   @override
-  CustomPainter? get glass => const _GlassPainter(_size, _radius, _screen);
+  CustomPainter? get glass => const _CasingGlassPainter(_size, _screen);
 
   /// En haut à droite (curseur noir sur l'U2).
   @override
@@ -407,10 +384,10 @@ class PhotoModel extends DeviceModel {
   ScreenLook get look => const ClassicLook(ui: ColorUi.video, landscape: Size(256, 192));
 
   @override
-  CustomPainter get body => const _WhiteBodyPainter(_size, _radius, _screen);
+  CustomPainter get body => _CasingBodyPainter(_size, _screen, look.background, wheelCenter, 140);
 
   @override
-  CustomPainter? get glass => const _GlassPainter(_size, _radius, _screen);
+  CustomPainter? get glass => const _CasingGlassPainter(_size, _screen);
 }
 
 /// Teintes du nano de 1re génération : plastique brillant blanc ou noir.
@@ -432,9 +409,13 @@ class Nano1Model extends DeviceModel {
 
   final Nano1Color color;
 
-  static const Size _size = Size(267, 600);
-  static const Rect _screen = Rect.fromLTWH(37, 27, 193, 145);
-  static const double _radius = 20;
+  /// Unités de dessin par pixel de la photo (redressée, coin de l'acrylique
+  /// en 209, 98).
+  static const double _k = 267 / 224;
+
+  static const Size _size = Size(224 * _k, 498 * _k);
+  static const Rect _screen = Rect.fromLTWH(31 * _k, 32.5 * _k, 164.5 * _k, 125 * _k);
+  static const double _radius = 16 * _k;
 
   @override
   String get id => color == Nano1Color.blanc ? 'nano1' : 'nano1-${color.name}';
@@ -472,28 +453,16 @@ class Nano1Model extends DeviceModel {
   HoldSwitch? get hold => const HoldSwitch(206);
 
   @override
-  Offset get wheelCenter => const Offset(133.5, 380);
+  Offset get wheelCenter => const Offset(112 * _k, 328 * _k);
 
   @override
   WheelStyle get wheel => switch (color) {
-    // Molette gris clair, inscriptions blanches, bouton central blanc.
-    Nano1Color.blanc => const WheelStyle(
-      radius: 104,
-      buttonRadius: 38,
-      iconScale: 0.7,
-      labelSize: 12,
-      labelSpacing: 0.8,
-      label: Color(0xFFFBFBFC),
-      recess: Color(0xFFDDDEE0),
-      ring: [Color(0xFFBFC0C4), Color(0xFFB5B6BA), Color(0xFFABACB1)],
-      edgeLight: 0.4,
-      groove: Color(0xFF9FA1A6),
-      buttonUp: [Color(0xFFF9F9FA), Color(0xFFEFEFF1)],
-    ),
+    // Dessinée avec le boîtier : seuls les appuis se voient.
+    Nano1Color.blanc => const WheelStyle(radius: 84 * _k, buttonRadius: 37 * _k, labels: false, onBody: true),
     // Molette gris anthracite, bouton central noir.
     Nano1Color.noir => const WheelStyle(
-      radius: 104,
-      buttonRadius: 38,
+      radius: 84 * _k,
+      buttonRadius: 37 * _k,
       iconScale: 0.7,
       labelSize: 12,
       labelSpacing: 0.8,
@@ -513,7 +482,7 @@ class Nano1Model extends DeviceModel {
 
   @override
   CustomPainter get body => switch (color) {
-    Nano1Color.blanc => const _WhiteBodyPainter(_size, _radius, _screen, rim: 2.5),
+    Nano1Color.blanc => _Nano1BodyPainter(look.background),
     Nano1Color.noir => const _WhiteBodyPainter(
       _size,
       _radius,
@@ -525,7 +494,10 @@ class Nano1Model extends DeviceModel {
   };
 
   @override
-  CustomPainter? get glass => const _GlassPainter(_size, _radius, _screen);
+  CustomPainter? get glass => switch (color) {
+    Nano1Color.blanc => const _Nano1GlassPainter(),
+    Nano1Color.noir => const _GlassPainter(_size, _radius, _screen),
+  };
 
   @override
   Size get windowSize => const Size(360, 720);
@@ -723,22 +695,20 @@ class _ThirdGenBodyPainter extends CustomPainter {
     );
   }
 
-  ui.Image _render() {
-    final width = (ThirdGenModel._size.width * _resolution).round();
-    final height = (ThirdGenModel._size.height * _resolution).round();
-    final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder);
-    canvas.scale(width / _photoBody.width, height / _photoBody.height);
-    canvas.translate(-_photoOrigin.dx, -_photoOrigin.dy);
+  /// Le boîtier seul (plastique, bords qui s'enroulent dans l'ombre, reflet
+  /// gauche), en pixels de la photo : repris par la 4e génération et le Photo.
+  /// [dark] : plastique noir brillant (U2), le reflet y est plus discret.
+  static void casing(Canvas canvas, {bool dark = false}) {
     final body = RRect.fromRectAndRadius(_photoBody, const Radius.circular(30));
 
     // Plastique plus clair à gauche, un peu voilé en haut et en bas.
     canvas.drawRRect(
       body,
       Paint()
-        ..shader = ui.Gradient.linear(const Offset(264, 0), const Offset(531, 0), const [
-          Color(0xFFEBEDEA), Color(0xFFE4E6E3), Color(0xFFDADCD9), Color(0xFFCFD1CE), Color(0xFFC9CBC8),
-        ], const [0, 0.45, 0.72, 0.9, 1]),
+        ..shader = ui.Gradient.linear(const Offset(264, 0), const Offset(531, 0), dark
+            ? const [Color(0xFF2A2B2D), Color(0xFF1F2022), Color(0xFF18191B), Color(0xFF111214), Color(0xFF0D0E0F)]
+            : const [Color(0xFFEBEDEA), Color(0xFFE4E6E3), Color(0xFFDADCD9), Color(0xFFCFD1CE), Color(0xFFC9CBC8)],
+            const [0, 0.45, 0.72, 0.9, 1]),
     );
     canvas.drawRRect(
       body,
@@ -757,7 +727,7 @@ class _ThirdGenBodyPainter extends CustomPainter {
         ..addRect(_photoBody.inflate(40))
         ..addRRect(body.shift(const Offset(-6, -6))),
       Paint()
-        ..color = const Color(0xFF1D2A2C).withValues(alpha: 0.6)
+        ..color = (dark ? Colors.black : const Color(0xFF1D2A2C)).withValues(alpha: dark ? 0.75 : 0.6)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
     );
     // Arête du haut.
@@ -773,12 +743,26 @@ class _ThirdGenBodyPainter extends CustomPainter {
       const Rect.fromLTWH(264, 73, 40, 452),
       Paint()
         ..shader = ui.Gradient.linear(const Offset(264, 0), const Offset(304, 0), [
-          for (final a in const [0.0, 0.25, 0.3, 0.12, 0.0]) Colors.white.withValues(alpha: a),
+          for (final a in const [0.0, 0.25, 0.3, 0.12, 0.0]) Colors.white.withValues(alpha: dark ? a * 0.35 : a),
         ], const [0, 0.18, 0.38, 0.7, 1]),
     );
-    canvas.drawPath(_stripe, Paint()..color = const Color(0xFFF9FBF6));
+    // Sur le noir brillant, le reflet est un gris froid, pas une bande blanche.
+    canvas.drawPath(_stripe, Paint()..color = dark ? const Color(0xFF7A7F85).withValues(alpha: 0.45) : const Color(0xFFF9FBF6));
     canvas.restore();
-    canvas.drawRRect(body.deflate(0.5), _line(const Color(0xFFA9AEAC).withValues(alpha: 0.25), 1));
+    canvas.drawRRect(
+      body.deflate(0.5),
+      _line(dark ? const Color(0xFF5A5D60).withValues(alpha: 0.4) : const Color(0xFFA9AEAC).withValues(alpha: 0.25), 1),
+    );
+  }
+
+  ui.Image _render() {
+    final width = (ThirdGenModel._size.width * _resolution).round();
+    final height = (ThirdGenModel._size.height * _resolution).round();
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    canvas.scale(width / _photoBody.width, height / _photoBody.height);
+    canvas.translate(-_photoOrigin.dx, -_photoOrigin.dy);
+    casing(canvas);
 
     // Écran dans son cadre noir, posé dans un léger creux.
     canvas.drawRRect(
@@ -846,14 +830,17 @@ class _ThirdGenGlassPainter extends CustomPainter {
 }
 
 /// Dessus d'un des quatre boutons (photo : 50 px de diamètre) : bombé, cerclé
-/// de gris puis d'un liseré clair, inscription rouge.
+/// de gris puis d'un liseré clair, inscription rouge, rétroéclairée quand
+/// [lit] monte (lueur orangée qui déborde un peu sur la touche).
 class _ThirdGenButtonPainter extends CustomPainter {
-  const _ThirdGenButtonPainter(this.zone, this.pressed);
+  const _ThirdGenButtonPainter(this.zone, this.pressed, this.lit);
 
   final WheelZone zone;
   final bool pressed;
+  final double lit;
 
   static const _red = Color(0xFFDF442D);
+  static const _glow = Color(0xFFFF6A3D);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -872,18 +859,41 @@ class _ThirdGenButtonPainter extends CustomPainter {
     );
     canvas.drawCircle(Offset.zero, 24.7, _line(const Color(0xFFAEB2AF), 1.1));
     canvas.drawCircle(Offset.zero, 23.5, _line(const Color(0xFFF5F7F4).withValues(alpha: pressed ? 0.4 : 1), 1));
-    final ink = Paint()..color = _red;
+    // Lumière diffuse sous la touche, autour de l'inscription.
+    if (lit > 0) {
+      canvas.drawCircle(
+        Offset.zero,
+        16,
+        Paint()
+          ..shader = ui.Gradient.radial(Offset.zero, 16, [
+            _glow.withValues(alpha: 0.12 * lit),
+            _glow.withValues(alpha: 0),
+          ]),
+      );
+    }
+    // Halo flou, puis le trait net, plus vif quand c'est allumé.
+    if (lit > 0) {
+      _symbol(canvas, Paint()
+        ..color = _glow.withValues(alpha: 0.45 * lit)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.2));
+    }
+    _symbol(canvas, Paint()..color = Color.lerp(_red, _glow, lit)!);
+    canvas.restore();
+  }
+
+  void _symbol(Canvas canvas, Paint ink) {
     if (zone == WheelZone.menu) {
       final tp = TextPainter(
-        text: const TextSpan(
+        text: TextSpan(
           text: 'MENU',
-          style: TextStyle(fontFamily: 'Noto Sans', fontSize: 9.4, fontWeight: FontWeight.w700, letterSpacing: 0.2, color: _red),
+          style: TextStyle(fontFamily: 'Noto Sans', fontSize: 9.4, fontWeight: FontWeight.w700, letterSpacing: 0.2, foreground: ink),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
       tp.paint(canvas, Offset(-tp.width / 2, 3.6 - tp.computeDistanceToActualBaseline(TextBaseline.alphabetic)));
       tp.dispose();
     } else {
+      canvas.save();
       canvas.translate(0, 0.2);
       canvas.scale(1.15);
       final icon = Path();
@@ -907,10 +917,563 @@ class _ThirdGenButtonPainter extends CustomPainter {
           break;
       }
       canvas.drawPath(icon, ink);
+      canvas.restore();
     }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ThirdGenButtonPainter old) =>
+      old.pressed != pressed || old.zone != zone || old.lit != lit;
+}
+
+// --- 1re et 2e générations -------------------------------------------------------
+//
+// Dessinées en pixels de la photo de référence (coin du plexi en 57, 161),
+// puis mises à l'échelle.
+
+const _gen1Origin = Offset(57, 161);
+const _gen1Plexi = Rect.fromLTWH(57, 161, 274, 462);
+const _gen1Face = Rect.fromLTWH(64, 170, 261, 443);
+const _gen1Lcd = Rect.fromLTWH(109.5, 190, 173, 139.5);
+const _gen1Wheel = Offset(195, 471);
+
+/// Tout ce qui ne bouge pas : plexi, façade, cadre de l'écran, anneau des
+/// boutons et ses inscriptions, disque, bouton central.
+class _FirstGenBodyPainter extends CustomPainter {
+  const _FirstGenBodyPainter(this.lcd);
+
+  final Color lcd;
+
+  /// Rendu une fois en image, comme le boîtier du 3G (voir
+  /// [_ThirdGenBodyPainter]) ; partagé par la 1re et la 2e génération.
+  /// shortcut: image à 3 × la taille de base, un peu floue au-delà (plein écran sur un écran 5K) ; la rendre à la taille affichée si ça se voit.
+  static ui.Image? _image;
+  static Color? _imageLcd;
+  static const _resolution = 3.0;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final outer = RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(27 * size.width / _gen1Plexi.width));
+    // Le plexi est transparent : l'ombre portée ne passe pas dessous.
+    canvas.save();
+    canvas.clipPath(Path()
+      ..fillType = PathFillType.evenOdd
+      ..addRect((Offset.zero & size).inflate(200))
+      ..addRRect(outer));
+    paintFloatShadow(canvas, outer, drop: 26, blur: 30);
+    canvas.restore();
+    if (_image == null || _imageLcd != lcd) {
+      _image?.dispose();
+      _image = _render();
+      _imageLcd = lcd;
+    }
+    final image = _image!;
+    canvas.drawImageRect(
+      image,
+      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+      Offset.zero & size,
+      Paint()..filterQuality = FilterQuality.medium,
+    );
+  }
+
+  ui.Image _render() {
+    final width = (FirstGenModel._size.width * _resolution).round();
+    final height = (FirstGenModel._size.height * _resolution).round();
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    canvas.scale(width / _gen1Plexi.width, height / _gen1Plexi.height);
+    canvas.translate(-_gen1Origin.dx, -_gen1Origin.dy);
+
+    // Plexi transparent qui déborde de la façade, un peu laiteux, et sa
+    // tranche du bas et de droite dans l'ombre.
+    final plexi = RRect.fromRectAndRadius(_gen1Plexi, const Radius.circular(27));
+    canvas.drawRRect(
+      plexi,
+      Paint()
+        ..shader = ui.Gradient.linear(const Offset(0, 161), const Offset(0, 623), [
+          const Color(0xFFF4F1EC).withValues(alpha: 0.55),
+          const Color(0xFFE8E4DE).withValues(alpha: 0.3),
+          const Color(0xFFD8D2CA).withValues(alpha: 0.25),
+        ], const [0, 0.5, 1]),
+    );
+    canvas.save();
+    canvas.clipRRect(plexi);
+    canvas.drawRRect(
+      plexi.shift(const Offset(2, 3)),
+      _line(const Color(0xFF5C554B).withValues(alpha: 0.35), 6)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+    );
+    canvas.restore();
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(const Rect.fromLTWH(57.6, 161.6, 272.8, 460.8), const Radius.circular(26.4)),
+      _line(const Color(0xFFF3F0EA).withValues(alpha: 0.6), 1.2),
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(const Rect.fromLTWH(59.5, 163.5, 269, 457), const Radius.circular(24.5)),
+      _line(const Color(0xFF8D867C).withValues(alpha: 0.3), 1),
+    );
+
+    // Façade blanche, plus sombre en bas, ombrée le long des bords sous le plexi.
+    final face = RRect.fromRectAndRadius(_gen1Face, const Radius.circular(19));
+    canvas.drawRRect(
+      face,
+      Paint()
+        ..shader = ui.Gradient.linear(const Offset(0, 170), const Offset(0, 613), const [
+          Color(0xFFEBE8E2), Color(0xFFE9E6E0), Color(0xFFE2DED7), Color(0xFFCDC7BE),
+        ], const [0, 0.5, 0.86, 1]),
+    );
+    canvas.drawRRect(
+      face,
+      Paint()
+        ..shader = ui.Gradient.linear(const Offset(64, 0), const Offset(325, 0), [
+          Colors.white.withValues(alpha: 0.18),
+          Colors.white.withValues(alpha: 0),
+          Colors.black.withValues(alpha: 0),
+          Colors.black.withValues(alpha: 0.04),
+        ], const [0, 0.12, 0.85, 1]),
+    );
+    canvas.save();
+    canvas.clipRRect(face);
+    canvas.drawPath(
+      Path()
+        ..fillType = PathFillType.evenOdd
+        ..addRect(_gen1Face.inflate(20))
+        ..addRRect(face),
+      Paint()
+        ..color = const Color(0xFF4A463F).withValues(alpha: 0.55)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.2),
+    );
+    canvas.restore();
+    canvas.drawRRect(face.inflate(0.5), _line(const Color(0xFF6F695F).withValues(alpha: 0.6), 1.2));
+
+    // Écran en retrait : le cadre sombre laisse voir sa paroi du haut.
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(const Rect.fromLTWH(103.5, 182.5, 185, 151), const Radius.circular(5)),
+      _line(const Color(0xFF6D675D).withValues(alpha: 0.3), 2.5)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.4),
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(const Rect.fromLTWH(105, 184, 182, 148), const Radius.circular(4)),
+      Paint()..color = const Color(0xFF3F3C36),
+    );
+    canvas.drawRect(_gen1Lcd, Paint()..color = lcd);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(const Rect.fromLTWH(105, 184, 182, 6), const Radius.circular(3)),
+      Paint()..color = const Color(0xFF2F2C27),
+    );
+
+    // Molette, réduite à 97 % autour de son centre.
+    canvas.translate(_gen1Wheel.dx, _gen1Wheel.dy);
+    canvas.scale(0.97);
+    // Anneau des quatre boutons : ombre sur la façade, bord gris, bombé.
+    canvas.drawCircle(
+      const Offset(1, 1.5),
+      121,
+      _line(const Color(0xFF5F594F).withValues(alpha: 0.38), 3.5)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.4),
+    );
+    canvas.drawCircle(
+      Offset.zero,
+      120,
+      Paint()
+        ..shader = ui.Gradient.linear(const Offset(0, -120), const Offset(0, 120), const [
+          Color(0xFFF3F1EC), Color(0xFFEFECE7), Color(0xFFDDD7CF),
+        ], const [0, 0.55, 1]),
+    );
+    canvas.drawCircle(Offset.zero, 119.6, _line(const Color(0xFF8A847A).withValues(alpha: 0.8), 1));
+    canvas.drawCircle(
+      Offset.zero,
+      107,
+      _line(Colors.black, 26)
+        ..shader = ui.Gradient.radial(Offset.zero, 120, [
+          const Color(0xFF7A746A).withValues(alpha: 0.1),
+          Colors.white.withValues(alpha: 0.25),
+          Colors.white.withValues(alpha: 0.2),
+          const Color(0xFF7A746A).withValues(alpha: 0.22),
+        ], const [0.78, 0.84, 0.92, 1]),
+    );
+    // Fentes en diagonale entre les boutons : un trait sombre, un filet clair.
+    for (final (dx, dy) in const [(-1.0, -1.0), (1.0, -1.0), (-1.0, 1.0), (1.0, 1.0)]) {
+      canvas.drawLine(Offset(67.2 * dx, 67.2 * dy), Offset(84 * dx, 84 * dy), _line(const Color(0xFF3A362F), 1.2));
+      canvas.drawLine(
+        Offset(67.2 * dx + 0.8, 67.2 * dy + 0.8),
+        Offset(84 * dx + 0.8, 84 * dy + 0.8),
+        _line(const Color(0xFFFBFAF7).withValues(alpha: 0.45), 0.7),
+      );
+    }
+    const ink = Color(0xFF98948B);
+    final menu = TextPainter(
+      text: const TextSpan(
+        text: 'menu',
+        style: TextStyle(fontFamily: 'Noto Sans', fontSize: 11.5, fontWeight: FontWeight.w700, letterSpacing: 0.4, color: ink),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    menu.paint(canvas, Offset(-menu.width / 2, -101.5 - menu.computeDistanceToActualBaseline(TextBaseline.alphabetic)));
+    menu.dispose();
+    canvas.drawPath(
+      Path()
+        // ⏮
+        ..addRect(const Rect.fromLTWH(-113.2, -3.1, 1.6, 7.2))
+        ..addPolygon(const [Offset(-111.4, 0.5), Offset(-106.8, -3.1), Offset(-106.8, 4.1)], true)
+        ..addPolygon(const [Offset(-106.9, 0.5), Offset(-102.3, -3.1), Offset(-102.3, 4.1)], true)
+        // ⏭
+        ..addPolygon(const [Offset(102.3, -3.1), Offset(106.9, 0.5), Offset(102.3, 4.1)], true)
+        ..addPolygon(const [Offset(106.9, -3.1), Offset(111.5, 0.5), Offset(106.9, 4.1)], true)
+        ..addRect(const Rect.fromLTWH(111.6, -3.1, 1.6, 7.2))
+        // ⏯
+        ..addPolygon(const [Offset(-6.6, 102.2), Offset(-0.4, 106), Offset(-6.6, 109.8)], true)
+        ..addRect(const Rect.fromLTWH(1.4, 102.4, 1.7, 7.2))
+        ..addRect(const Rect.fromLTWH(4.7, 102.4, 1.7, 7.2)),
+      Paint()..color = ink,
+    );
+    // Disque qui tourne, cerné d'une rainure sombre.
+    canvas.drawCircle(
+      Offset.zero,
+      94,
+      Paint()
+        ..shader = ui.Gradient.radial(const Offset(0, -31), 120, const [Color(0xFFE5E2DC), Color(0xFFDBD7CF)]),
+    );
+    canvas.drawCircle(Offset.zero, 94, _line(const Color(0xFF3E3A33), 1.3));
+    canvas.drawCircle(Offset.zero, 92.8, _line(const Color(0xFFF6F3EE).withValues(alpha: 0.55), 0.9));
+    // Bouton central.
+    const center = Offset(0, -1);
+    canvas.drawCircle(
+      center,
+      33.5,
+      Paint()..shader = ui.Gradient.radial(const Offset(0, -11), 40, const [Color(0xFFF1EEE9), Color(0xFFE7E3DC)]),
+    );
+    canvas.drawCircle(center, 33.5, _line(const Color(0xFF4A463F), 1.1));
+    canvas.drawCircle(center, 32.4, _line(const Color(0xFFFBFAF7).withValues(alpha: 0.7), 0.9));
+
+    final picture = recorder.endRecording();
+    final image = picture.toImageSync(width, height);
+    picture.dispose();
+    return image;
+  }
+
+  @override
+  bool shouldRepaint(covariant _FirstGenBodyPainter old) => old.lcd != lcd;
+}
+
+/// Reflet du plexi en haut de l'écran, par-dessus son contenu.
+class _FirstGenGlassPainter extends CustomPainter {
+  const _FirstGenGlassPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final scale = size.width / _gen1Plexi.width;
+    canvas.drawRect(
+      Rect.fromLTWH((_gen1Lcd.left - _gen1Origin.dx) * scale, (_gen1Lcd.top - _gen1Origin.dy) * scale, _gen1Lcd.width * scale, 1.2 * scale),
+      Paint()..color = const Color(0xFFE6E0CC).withValues(alpha: 0.6),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter old) => false;
+}
+
+// --- Boîtier du 3G sur la 4e génération et le Photo --------------------------
+
+/// Le boîtier du 3G ([_ThirdGenBodyPainter.casing]) à la taille de l'appareil,
+/// avec son écran dans un cadre noir et le léger creux de la molette (la
+/// molette elle-même : [WheelPainter]).
+class _CasingBodyPainter extends CustomPainter {
+  const _CasingBodyPainter(this.bodySize, this.screen, this.lcd, this.wheelCenter, this.wheelRadius, {this.dark = false});
+
+  /// Façade en plastique noir (U2).
+  final bool dark;
+
+  final Size bodySize;
+  final Rect screen;
+  final Color lcd;
+  final Offset wheelCenter;
+  final double wheelRadius;
+
+  /// Rendu une fois en image par appareil, comme le boîtier du 3G.
+  /// shortcut: image à 3 × la taille de base, un peu floue au-delà (plein écran sur un écran 5K) ; la rendre à la taille affichée si ça se voit.
+  static final _images = <(Size, Rect, Color, bool), ui.Image>{};
+  static const _resolution = 3.0;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    paintFloatShadow(
+      canvas,
+      RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(30 * size.width / _photoBody.width)),
+      drop: 26,
+      blur: 30,
+    );
+    final image = _images[(bodySize, screen, lcd, dark)] ??= _render();
+    canvas.drawImageRect(
+      image,
+      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+      Offset.zero & size,
+      Paint()..filterQuality = FilterQuality.medium,
+    );
+  }
+
+  ui.Image _render() {
+    final width = (bodySize.width * _resolution).round();
+    final height = (bodySize.height * _resolution).round();
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    canvas.scale(width / _photoBody.width, height / _photoBody.height);
+    canvas.translate(-_photoOrigin.dx, -_photoOrigin.dy);
+    _ThirdGenBodyPainter.casing(canvas, dark: dark);
+    // Creux : gris sur le plastique blanc, noir sur le noir.
+    Paint hollow(double alpha) => dark ? (_hollow(1)..color = Colors.black.withValues(alpha: 0.6)) : _hollow(alpha);
+
+    // Repère de l'appareil → pixels de la photo.
+    final kx = bodySize.width / _photoBody.width, ky = bodySize.height / _photoBody.height;
+    final lcdRect = Rect.fromLTWH(
+      _photoOrigin.dx + screen.left / kx,
+      _photoOrigin.dy + screen.top / ky,
+      screen.width / kx,
+      screen.height / ky,
+    );
+    // Écran dans son cadre noir, posé dans un léger creux (comme le 3G).
+    canvas.drawRRect(RRect.fromRectAndRadius(lcdRect.inflate(5.5), const Radius.circular(5)), hollow(0.3)..strokeWidth = 2.5);
+    canvas.drawRRect(RRect.fromRectAndRadius(lcdRect.inflate(3.5), const Radius.circular(3.5)), Paint()..color = const Color(0xFF0C1010));
+    canvas.drawRect(lcdRect, Paint()..color = lcd);
+    // Creux autour de la molette.
+    final wheel = Offset(_photoOrigin.dx + wheelCenter.dx / kx, _photoOrigin.dy + wheelCenter.dy / ky);
+    canvas.drawCircle(wheel, (wheelRadius + 1.5) / kx + 1, hollow(0.3));
+
+    final picture = recorder.endRecording();
+    final image = picture.toImageSync(width, height);
+    picture.dispose();
+    return image;
+  }
+
+  @override
+  bool shouldRepaint(covariant _CasingBodyPainter old) =>
+      old.bodySize != bodySize || old.screen != screen || old.lcd != lcd || old.wheelCenter != wheelCenter || old.dark != dark;
+}
+
+/// Filet de lumière en haut de l'écran, par-dessus son contenu (comme le 3G).
+class _CasingGlassPainter extends CustomPainter {
+  const _CasingGlassPainter(this.bodySize, this.screen);
+
+  final Size bodySize;
+  final Rect screen;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final k = size.width / bodySize.width;
+    canvas.drawRect(
+      Rect.fromLTWH(screen.left * k, screen.top * k, screen.width * k, 1.5 * size.height / _photoBody.height),
+      Paint()..color = const Color(0xFFDFE6EF).withValues(alpha: 0.8),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _CasingGlassPainter old) => old.screen != screen || old.bodySize != bodySize;
+}
+
+// --- Nano de 1re génération, blanc ---------------------------------------------
+//
+// Dessiné en pixels de la photo de référence redressée (coin de l'acrylique
+// en 209, 98), puis mis à l'échelle.
+
+const _nano1Origin = Offset(209, 98);
+const _nano1Plexi = Rect.fromLTWH(209, 98, 224, 498);
+const _nano1Face = Rect.fromLTWH(212.5, 101.5, 217, 491);
+const _nano1Lcd = Rect.fromLTWH(240, 130.5, 164.5, 125);
+
+/// Liseré d'acrylique transparent, façade blanche, cadre de l'écran, molette
+/// grise et ses inscriptions, bouton central : rien n'y bouge.
+class _Nano1BodyPainter extends CustomPainter {
+  const _Nano1BodyPainter(this.lcd);
+
+  final Color lcd;
+
+  /// Rendu une fois en image, comme le boîtier du 3G.
+  /// shortcut: image à 3 × la taille de base, un peu floue au-delà (plein écran sur un écran 5K) ; la rendre à la taille affichée si ça se voit.
+  static ui.Image? _image;
+  static Color? _imageLcd;
+  static const _resolution = 3.0;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final outer = RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(16 * size.width / _nano1Plexi.width));
+    // L'acrylique est transparent : l'ombre portée ne passe pas dessous.
+    canvas.save();
+    canvas.clipPath(Path()
+      ..fillType = PathFillType.evenOdd
+      ..addRect((Offset.zero & size).inflate(200))
+      ..addRRect(outer));
+    paintFloatShadow(canvas, outer, drop: 22, blur: 24);
+    canvas.restore();
+    if (_image == null || _imageLcd != lcd) {
+      _image?.dispose();
+      _image = _render();
+      _imageLcd = lcd;
+    }
+    final image = _image!;
+    canvas.drawImageRect(
+      image,
+      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+      Offset.zero & size,
+      Paint()..filterQuality = FilterQuality.medium,
+    );
+  }
+
+  ui.Image _render() {
+    final width = (Nano1Model._size.width * _resolution).round();
+    final height = (Nano1Model._size.height * _resolution).round();
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    canvas.scale(width / _nano1Plexi.width, height / _nano1Plexi.height);
+    canvas.translate(-_nano1Origin.dx, -_nano1Origin.dy);
+
+    // Liseré d'acrylique : un peu laiteux, tranche du bas et de droite dans l'ombre.
+    final plexi = RRect.fromRectAndRadius(_nano1Plexi, const Radius.circular(16));
+    canvas.drawRRect(
+      plexi,
+      Paint()
+        ..shader = ui.Gradient.linear(const Offset(0, 98), const Offset(0, 596), [
+          const Color(0xFFF6F7F8).withValues(alpha: 0.6),
+          const Color(0xFFE9EBED).withValues(alpha: 0.4),
+          const Color(0xFFD6D9DC).withValues(alpha: 0.4),
+        ], const [0, 0.5, 1]),
+    );
+    canvas.save();
+    canvas.clipRRect(plexi);
+    canvas.drawRRect(
+      plexi.shift(const Offset(1.5, 2)),
+      _line(const Color(0xFF4F565C).withValues(alpha: 0.35), 4)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5),
+    );
+    canvas.restore();
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(const Rect.fromLTWH(209.5, 98.5, 223, 497), const Radius.circular(15.5)),
+      _line(const Color(0xFFF5F6F7).withValues(alpha: 0.65), 1),
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(const Rect.fromLTWH(211, 100, 220, 494), const Radius.circular(14)),
+      _line(const Color(0xFF7D848A).withValues(alpha: 0.3), 0.8),
+    );
+
+    // Façade blanche, ombrée le long des bords sous l'acrylique.
+    final face = RRect.fromRectAndRadius(_nano1Face, const Radius.circular(12.5));
+    canvas.drawRRect(
+      face,
+      Paint()
+        ..shader = ui.Gradient.linear(const Offset(0, 101), const Offset(0, 592), const [
+          Color(0xFFF2F3F2), Color(0xFFEEEFEE), Color(0xFFE2E4E4),
+        ], const [0, 0.55, 1]),
+    );
+    canvas.drawRRect(
+      face,
+      Paint()
+        ..shader = ui.Gradient.linear(const Offset(212, 0), const Offset(430, 0), [
+          Colors.white.withValues(alpha: 0.25),
+          Colors.white.withValues(alpha: 0),
+          Colors.black.withValues(alpha: 0),
+          Colors.black.withValues(alpha: 0.05),
+        ], const [0, 0.1, 0.88, 1]),
+    );
+    canvas.save();
+    canvas.clipRRect(face);
+    canvas.drawPath(
+      Path()
+        ..fillType = PathFillType.evenOdd
+        ..addRect(_nano1Face.inflate(20))
+        ..addRRect(face),
+      Paint()
+        ..color = const Color(0xFF3F454B).withValues(alpha: 0.45)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.8),
+    );
+    canvas.restore();
+    canvas.drawRRect(face.inflate(0.5), _line(const Color(0xFF6C737A).withValues(alpha: 0.5), 1));
+
+    // Écran dans son cadre noir.
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(const Rect.fromLTWH(234, 124, 177, 136), const Radius.circular(5)),
+      Paint()..color = const Color(0xFF141517),
+    );
+    canvas.drawRect(_nano1Lcd, Paint()..color = lcd);
+
+    // Molette : disque gris à fleur de façade, inscriptions blanches.
+    const c = Offset(321, 426);
+    canvas.drawCircle(
+      c,
+      85,
+      _line(const Color(0xFF5E656B).withValues(alpha: 0.18), 2)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.2),
+    );
+    canvas.drawCircle(
+      c,
+      84,
+      Paint()..shader = ui.Gradient.radial(const Offset(321, 400), 110, const [Color(0xFFC4C6C9), Color(0xFFB8BBBE)]),
+    );
+    canvas.drawCircle(c, 83.6, _line(const Color(0xFFA6A9AD).withValues(alpha: 0.7), 0.8));
+    const ink = Color(0xFFFBFBFB);
+    final menu = TextPainter(
+      text: const TextSpan(
+        text: 'MENU',
+        style: TextStyle(fontFamily: 'Noto Sans', fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 0.6, color: ink),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    menu.paint(canvas, Offset(321 - menu.width / 2, 364 - menu.computeDistanceToActualBaseline(TextBaseline.alphabetic)));
+    menu.dispose();
+    canvas.drawPath(
+      Path()
+        // ⏮
+        ..addRect(const Rect.fromLTWH(247.8, 422, 2, 10))
+        ..addPolygon(const [Offset(250, 427), Offset(256.2, 422), Offset(256.2, 432)], true)
+        ..addPolygon(const [Offset(256, 427), Offset(262.2, 422), Offset(262.2, 432)], true)
+        // ⏭
+        ..addPolygon(const [Offset(379.8, 422), Offset(386, 427), Offset(379.8, 432)], true)
+        ..addPolygon(const [Offset(386, 422), Offset(392.2, 427), Offset(386, 432)], true)
+        ..addRect(const Rect.fromLTWH(392.2, 422, 2, 10))
+        // ⏯
+        ..addPolygon(const [Offset(312.5, 488.8), Offset(320.5, 494), Offset(312.5, 499.2)], true)
+        ..addRect(const Rect.fromLTWH(323, 489, 2.4, 10))
+        ..addRect(const Rect.fromLTWH(327.4, 489, 2.4, 10)),
+      Paint()..color = ink,
+    );
+    // Bouton central blanc.
+    canvas.drawCircle(
+      c,
+      37,
+      Paint()..shader = ui.Gradient.radial(const Offset(321, 412), 44, const [Color(0xFFF8F8F7), Color(0xFFEFEFEE)]),
+    );
+    canvas.drawCircle(c, 36.6, _line(const Color(0xFFB3B6B9).withValues(alpha: 0.8), 0.8));
+
+    final picture = recorder.endRecording();
+    final image = picture.toImageSync(width, height);
+    picture.dispose();
+    return image;
+  }
+
+  @override
+  bool shouldRepaint(covariant _Nano1BodyPainter old) => old.lcd != lcd;
+}
+
+/// Par-dessus l'écran : filet de lumière en haut de l'écran et très léger
+/// reflet en biais de l'acrylique sur toute la façade.
+class _Nano1GlassPainter extends CustomPainter {
+  const _Nano1GlassPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.save();
+    canvas.scale(size.width / _nano1Plexi.width, size.height / _nano1Plexi.height);
+    canvas.translate(-_nano1Origin.dx, -_nano1Origin.dy);
+    canvas.drawRect(
+      Rect.fromLTWH(_nano1Lcd.left, _nano1Lcd.top, _nano1Lcd.width, 1.2),
+      Paint()..color = Colors.white.withValues(alpha: 0.5),
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(_nano1Face, const Radius.circular(12.5)),
+      Paint()
+        ..shader = ui.Gradient.linear(const Offset(209, 98), const Offset(433, 380), [
+          Colors.white.withValues(alpha: 0.22),
+          Colors.white.withValues(alpha: 0.06),
+          Colors.white.withValues(alpha: 0),
+          Colors.white.withValues(alpha: 0),
+        ], const [0, 0.45, 0.46, 1]),
+    );
     canvas.restore();
   }
 
   @override
-  bool shouldRepaint(covariant _ThirdGenButtonPainter old) => old.pressed != pressed || old.zone != zone;
+  bool shouldRepaint(covariant CustomPainter old) => false;
 }

@@ -12,8 +12,8 @@ Future<List<String>> _pumpWheel(WidgetTester tester) async {
       textDirection: TextDirection.ltr,
       child: Center(
         child: SizedBox(
-          width: G.wheelRadius * 2,
-          height: G.wheelRadius * 2,
+          width: const ClassicModel().wheel.radius * 2,
+          height: const ClassicModel().wheel.radius * 2,
           child: DeviceWheel(
             style: const ClassicModel().wheel,
             onScroll: (d) => log.add('scroll $d'),

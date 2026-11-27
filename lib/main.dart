@@ -72,6 +72,7 @@ Future<void> main() async {
   }
 
   if (Platform.environment['LECTEUR_FPS'] != null) _logFrameTimings();
+  if (Platform.isLinux) WidgetsBinding.instance.addObserver(_ResizeReporter());
 
 
   final player = _player();
@@ -331,5 +332,22 @@ class _RiseInState extends State<_RiseIn> with SingleTickerProviderStateMixin {
         child: widget.child,
       ),
     );
+  }
+}
+
+/// Linux : après un agrandissement brusque de la fenêtre, le lanceur GTK ne
+/// dessine plus rien (sinon l'ancienne image se répète en mosaïque) tant
+/// qu'on ne lui a pas dit qu'une image à la nouvelle taille est prête.
+class _ResizeReporter with WidgetsBindingObserver {
+  static const _channel = MethodChannel('kliqplayer/window');
+
+  @override
+  void didChangeMetrics() {
+    // Deux images : la première est construite à la nouvelle taille, la
+    // seconde n'arrive qu'une fois la première rendue.
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      SchedulerBinding.instance.addPostFrameCallback((_) => _channel.invokeMethod<void>('drawn').ignore());
+      SchedulerBinding.instance.scheduleFrame();
+    });
   }
 }

@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 
 /// Version de l'appli, affichée dans Réglages › À propos. La même que dans
 /// pubspec.yaml (un test le vérifie).
-const appVersion = '1.2.0';
+const appVersion = '1.3.0';
 
 /// Page où télécharger la dernière version.
 const releasesUrl = 'https://github.com/Perzivalle/kliqplayer/releases/latest';
