@@ -678,9 +678,10 @@ class DeviceNav extends ChangeNotifier {
         // Ce qui n'a pas marché (pas d'appareil Spotify…) ; valider l'efface.
         if (player.notice case final notice?)
           MenuEntry(notice, action: player.dismissNotice),
-        // Une version plus récente est publiée : valider ouvre sa page.
+        // Une version plus récente est publiée : valider l'installe et relance
+        // l'appli, ou ouvre sa page si ça ne peut pas se faire ici.
         if (newVersion case final version?)
-          MenuEntry(tr('Mise à jour'), value: () => version, action: () => launchUrl(Uri.parse(releasesUrl))),
+          MenuEntry(tr('Mise à jour'), value: () => updateStatus ?? version, action: _update),
         MenuEntry(tr('Musique'), open: _music),
         MenuEntry(tr('Réglages'), open: _settings, preview: MenuPreview.settings),
         MenuEntry(tr('Morceau au hasard'), action: () {
@@ -693,6 +694,20 @@ class DeviceNav extends ChangeNotifier {
         if (player.current != null)
           MenuEntry(tr('En lecture'), open: NowPlayingPage.new, preview: MenuPreview.nowPlaying),
       ]);
+
+  Future<void> _update() async {
+    if (updateStatus != null) return; // déjà en train de télécharger
+    if (!await prepareUpdate()) {
+      launchUrl(Uri.parse(releasesUrl));
+      return;
+    }
+    // Comme en quittant par Échap : le script attend qu'on soit fermé.
+    for (final a in player.accounts) {
+      a.shutdown();
+    }
+    Settings.flush();
+    exit(0);
+  }
 
   MenuPage _music() => MenuPage(tr('Musique'), live: true, kind: MenuKind.split, () => [
         if (coverFlow && player.albums.isNotEmpty)
