@@ -31,7 +31,12 @@ class WheelStyle {
     this.menuLabel = 'MENU',
     this.turns = true,
     this.shuffle = false,
+    this.onBody = false,
   });
+
+  /// Molette dessinée avec le boîtier (3e génération) : ici, seul l'appui
+  /// au centre se voit.
+  final bool onBody;
 
   /// Texte du haut de la molette (« menu » en minuscules sur la 1re génération).
   final String menuLabel;
@@ -106,6 +111,10 @@ class WheelPainter extends CustomPainter {
     final s = style;
     final r = s.radius;
     final b = s.buttonRadius;
+    if (s.onBody) {
+      if (pressed == WheelZone.center) canvas.drawCircle(c, b, Paint()..color = Colors.black.withValues(alpha: 0.06));
+      return;
+    }
 
     // Léger creux dans la façade autour de la molette.
     canvas.drawCircle(c, r + 1.5, Paint()..color = s.recess);

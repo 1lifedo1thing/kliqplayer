@@ -1,9 +1,9 @@
-import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
 import 'classic.dart';
+import 'finish.dart';
 import 'look.dart';
 import 'mini.dart';
 import 'model.dart';
@@ -166,14 +166,16 @@ class SecondGenModel extends DeviceModel {
 }
 
 /// La 3e génération (2003) : molette tactile sans inscriptions, quatre
-/// boutons ronds alignés au-dessus, rétroéclairés en orange.
+/// boutons ronds alignés au-dessus. Dessinée d'après une photo de face
+/// (267 × 452 px) : les cotes ci-dessous sont celles de la photo, × [_k].
 class ThirdGenModel extends DeviceModel {
   const ThirdGenModel();
 
-  // ≈ 6,67 unités par mm (61,8 × 104 mm).
-  static const Size _size = Size(412, 693);
-  static const Rect _screen = Rect.fromLTWH(65, 46, 282, 226);
-  static const double _radius = 32;
+  /// Unités de dessin par pixel de la photo.
+  static const double _k = 412 / 267;
+
+  static const Size _size = Size(267 * _k, 452 * _k);
+  static const Rect _screen = Rect.fromLTWH(45 * _k, 30 * _k, 177 * _k, 144 * _k);
 
   @override
   String get id => 'gen3';
@@ -194,7 +196,7 @@ class ThirdGenModel extends DeviceModel {
   Size get size => _size;
 
   @override
-  double get cornerRadius => _radius;
+  double get cornerRadius => 30 * _k;
 
   @override
   Rect get screen => _screen;
@@ -205,23 +207,19 @@ class ThirdGenModel extends DeviceModel {
   double get jackX => 218;
 
   @override
-  Offset get wheelCenter => const Offset(206, 532);
+  Offset get wheelCenter => const Offset(135.5 * _k, 337.5 * _k);
 
+  /// Dessinée avec le boîtier : la molette ne montre que l'appui au centre.
   @override
-  WheelStyle get wheel => const WheelStyle(
-        radius: 138,
-        buttonRadius: 52,
-        labels: false,
-        sideClicks: false,
-        ring: [Color(0xFFF9F9FA), Color(0xFFF1F2F3), Color(0xFFE6E8EA)],
-      );
+  WheelStyle get wheel =>
+      const WheelStyle(radius: 87 * _k, buttonRadius: 31.4 * _k, labels: false, sideClicks: false, onBody: true);
 
   @override
   List<DeviceButton> get buttons => const [
-        DeviceButton(WheelZone.previous, Offset(72, 334), 37),
-        DeviceButton(WheelZone.menu, Offset(161, 334), 37),
-        DeviceButton(WheelZone.playPause, Offset(251, 334), 37),
-        DeviceButton(WheelZone.next, Offset(340, 334), 37),
+        DeviceButton(WheelZone.previous, Offset(46.5 * _k, 218 * _k), 25 * _k),
+        DeviceButton(WheelZone.menu, Offset(105.5 * _k, 218 * _k), 25 * _k),
+        DeviceButton(WheelZone.playPause, Offset(164.5 * _k, 218 * _k), 25 * _k),
+        DeviceButton(WheelZone.next, Offset(223 * _k, 218 * _k), 25 * _k),
       ];
 
   /// En haut à gauche.
@@ -230,16 +228,16 @@ class ThirdGenModel extends DeviceModel {
 
   @override
   CustomPainter buttonPainter(DeviceButton button, {required bool pressed}) =>
-      _BacklitButtonPainter(button.zone, pressed);
+      _ThirdGenButtonPainter(button.zone, pressed);
 
   @override
   ScreenLook get look => _chicagoRatedLook;
 
   @override
-  CustomPainter get body => const _WhiteBodyPainter(_size, _radius, _screen);
+  CustomPainter get body => _ThirdGenBodyPainter(_chicagoRatedLook.background);
 
   @override
-  CustomPainter? get glass => const _GlassPainter(_size, _radius, _screen);
+  CustomPainter? get glass => const _ThirdGenGlassPainter();
 }
 
 /// Teintes de la 4e génération : blanche, ou l'édition U2 (façade noire,
@@ -656,96 +654,263 @@ class _GlassPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter old) => false;
 }
 
-// --- Boutons rétroéclairés de la 3e génération --------------------------------
+// --- 3e génération ---------------------------------------------------------------
+//
+// Tout est dessiné en pixels de la photo de référence (coin du boîtier en
+// 264, 73), puis mis à l'échelle.
 
-class _BacklitButtonPainter extends CustomPainter {
-  const _BacklitButtonPainter(this.zone, this.pressed);
+const _photoOrigin = Offset(264, 73);
+const _photoBody = Rect.fromLTWH(264, 73, 267, 452);
+const _buttonXs = [310.5, 369.5, 428.5, 487.0];
+
+/// Halo flou autour de ce qui est un peu enfoncé (boutons, molette, écran).
+Paint _hollow(double alpha) => Paint()
+  ..style = PaintingStyle.stroke
+  ..strokeWidth = 3
+  ..color = const Color(0xFF7D8481).withValues(alpha: alpha)
+  ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.6);
+
+Paint _line(Color color, double width) => Paint()
+  ..style = PaintingStyle.stroke
+  ..strokeWidth = width
+  ..color = color;
+
+/// Boîtier, cadre de l'écran, creux des boutons, molette et bouton central :
+/// rien n'y bouge.
+class _ThirdGenBodyPainter extends CustomPainter {
+  const _ThirdGenBodyPainter(this.lcd);
+
+  /// Fond de l'écran, sous les bords que l'écran ne couvre pas tout à fait.
+  final Color lcd;
+
+  /// Reflet du bord gauche : une bande nette qui suit les coins du haut et
+  /// du bas en s'affinant jusqu'à une pointe.
+  static final _stripe = Path()
+    ..moveTo(272, 100)
+    ..cubicTo(274, 90, 283, 83.7, 296, 84)
+    ..cubicTo(285, 88.5, 279.5, 95, 279, 101)
+    ..lineTo(279, 497)
+    ..cubicTo(279.5, 503, 285, 509.5, 296, 514)
+    ..cubicTo(283, 514.3, 274, 508, 272, 498)
+    ..close();
+
+  /// Rendu une fois en image : sans ça le moteur refait les flous à chaque
+  /// image de l'écran, même quand le boîtier ne change pas.
+  /// shortcut: image à 3 × la taille de base, un peu floue au-delà (plein écran sur un écran 5K) ; la rendre à la taille affichée si ça se voit.
+  static ui.Image? _image;
+  static Color? _imageLcd;
+  static const _resolution = 3.0;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    paintFloatShadow(
+      canvas,
+      RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(30 * size.width / _photoBody.width)),
+      drop: 26,
+      blur: 30,
+    );
+    if (_image == null || _imageLcd != lcd) {
+      _image?.dispose();
+      _image = _render();
+      _imageLcd = lcd;
+    }
+    final image = _image!;
+    canvas.drawImageRect(
+      image,
+      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+      Offset.zero & size,
+      Paint()..filterQuality = FilterQuality.medium,
+    );
+  }
+
+  ui.Image _render() {
+    final width = (ThirdGenModel._size.width * _resolution).round();
+    final height = (ThirdGenModel._size.height * _resolution).round();
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    canvas.scale(width / _photoBody.width, height / _photoBody.height);
+    canvas.translate(-_photoOrigin.dx, -_photoOrigin.dy);
+    final body = RRect.fromRectAndRadius(_photoBody, const Radius.circular(30));
+
+    // Plastique plus clair à gauche, un peu voilé en haut et en bas.
+    canvas.drawRRect(
+      body,
+      Paint()
+        ..shader = ui.Gradient.linear(const Offset(264, 0), const Offset(531, 0), const [
+          Color(0xFFEBEDEA), Color(0xFFE4E6E3), Color(0xFFDADCD9), Color(0xFFCFD1CE), Color(0xFFC9CBC8),
+        ], const [0, 0.45, 0.72, 0.9, 1]),
+    );
+    canvas.drawRRect(
+      body,
+      Paint()
+        ..shader = ui.Gradient.linear(const Offset(0, 73), const Offset(0, 525), [
+          for (final a in const [0.05, 0.03, 0.0, 0.0, 0.01, 0.045]) Colors.black.withValues(alpha: a),
+        ], const [0, 0.1, 0.3, 0.4, 0.55, 1]),
+    );
+    canvas.save();
+    canvas.clipRRect(body);
+    // Les bords droit et bas s'enroulent dans l'ombre : tout ce qui est hors
+    // du boîtier décalé vers le haut-gauche, flouté.
+    canvas.drawPath(
+      Path()
+        ..fillType = PathFillType.evenOdd
+        ..addRect(_photoBody.inflate(40))
+        ..addRRect(body.shift(const Offset(-6, -6))),
+      Paint()
+        ..color = const Color(0xFF1D2A2C).withValues(alpha: 0.6)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
+    );
+    // Arête du haut.
+    canvas.drawRect(
+      const Rect.fromLTWH(264, 73, 267, 24),
+      Paint()
+        ..shader = ui.Gradient.linear(const Offset(0, 73), const Offset(0, 97), [
+          for (final a in const [0.55, 0.27, 0.13, 0.05, 0.0]) const Color(0xFF272D2D).withValues(alpha: a),
+        ], const [0, 0.21, 0.38, 0.55, 1]),
+    );
+    // Reflet du bord gauche : lueur douce, puis la bande nette.
+    canvas.drawRect(
+      const Rect.fromLTWH(264, 73, 40, 452),
+      Paint()
+        ..shader = ui.Gradient.linear(const Offset(264, 0), const Offset(304, 0), [
+          for (final a in const [0.0, 0.25, 0.3, 0.12, 0.0]) Colors.white.withValues(alpha: a),
+        ], const [0, 0.18, 0.38, 0.7, 1]),
+    );
+    canvas.drawPath(_stripe, Paint()..color = const Color(0xFFF9FBF6));
+    canvas.restore();
+    canvas.drawRRect(body.deflate(0.5), _line(const Color(0xFFA9AEAC).withValues(alpha: 0.25), 1));
+
+    // Écran dans son cadre noir, posé dans un léger creux.
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(const Rect.fromLTWH(303.5, 97.5, 188.5, 154.5), const Radius.circular(5)),
+      _hollow(0.3)..strokeWidth = 2.5,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(const Rect.fromLTWH(305.5, 99.5, 184.5, 150.5), const Radius.circular(3.5)),
+      Paint()..color = const Color(0xFF0C1010),
+    );
+    canvas.drawRect(const Rect.fromLTWH(309, 103, 177, 144), Paint()..color = lcd);
+
+    // Creux des quatre boutons (leur dessus : _ThirdGenButtonPainter).
+    for (final x in _buttonXs) {
+      canvas.drawCircle(Offset(x, 291), 26.2, _hollow(0.27));
+    }
+
+    // Molette : même plastique que le boîtier, cernée d'une rainure.
+    const wheel = Offset(399.5, 410);
+    canvas.drawCircle(wheel, 88.5, _hollow(0.3));
+    canvas.drawCircle(wheel, 86.9, _line(const Color(0xFFA9ADAA), 1.2));
+    canvas.drawCircle(wheel, 85.6, _line(const Color(0xFFF6F8F5), 1.1));
+    canvas.drawCircle(wheel, 84.4, _line(const Color(0xFFCFD2CF), 0.8));
+
+    // Bouton central, creusé : plus sombre en haut à gauche.
+    const center = Offset(399.5, 411);
+    canvas.drawCircle(center, 33, _hollow(0.18));
+    canvas.drawCircle(
+      center,
+      31.4,
+      Paint()
+        ..shader = ui.Gradient.radial(
+          center.translate(6.3, 9.4),
+          44,
+          const [Color(0xFFE4E6E3), Color(0xFFD4D6D3)],
+        ),
+    );
+    canvas.drawCircle(center, 31.4, _line(const Color(0xFFB6BAB7), 1.3));
+    canvas.drawCircle(center, 29.7, _line(const Color(0xFFF4F6F3), 1.1));
+    final picture = recorder.endRecording();
+    final image = picture.toImageSync(width, height);
+    picture.dispose();
+    return image;
+  }
+
+  @override
+  bool shouldRepaint(covariant _ThirdGenBodyPainter old) => old.lcd != lcd;
+}
+
+/// Filet de lumière en haut de l'écran, par-dessus son contenu.
+class _ThirdGenGlassPainter extends CustomPainter {
+  const _ThirdGenGlassPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final scale = size.width / _photoBody.width;
+    canvas.drawRect(
+      Rect.fromLTWH((309 - _photoOrigin.dx) * scale, (103 - _photoOrigin.dy) * scale, 177 * scale, 1.5 * scale),
+      Paint()..color = const Color(0xFFDFE6EF).withValues(alpha: 0.8),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter old) => false;
+}
+
+/// Dessus d'un des quatre boutons (photo : 50 px de diamètre) : bombé, cerclé
+/// de gris puis d'un liseré clair, inscription rouge.
+class _ThirdGenButtonPainter extends CustomPainter {
+  const _ThirdGenButtonPainter(this.zone, this.pressed);
 
   final WheelZone zone;
   final bool pressed;
 
-  static const _glow = Color(0xFFF2492E); // rouge-orangé (photos du rétroéclairage)
+  static const _red = Color(0xFFDF442D);
 
   @override
   void paint(Canvas canvas, Size size) {
-    final c = size.center(Offset.zero);
-    final r = size.width / 2;
-    // Bague grise, puis touche blanche légèrement bombée.
-    canvas.drawCircle(c, r, Paint()..color = const Color(0xFFC9CCD0));
+    canvas.save();
+    canvas.translate(size.width / 2, size.height / 2);
+    canvas.scale(size.width / 50);
     canvas.drawCircle(
-      c,
-      r - 2.5,
+      Offset.zero,
+      25,
       Paint()
-        ..shader = ui.Gradient.linear(
-          c.translate(0, -r),
-          c.translate(0, r),
-          pressed ? const [Color(0xFFE2E4E7), Color(0xFFF2F3F4)] : const [Color(0xFFFFFFFF), Color(0xFFEDEEF0)],
+        ..shader = ui.Gradient.radial(
+          const Offset(0, -2.5),
+          30,
+          pressed ? const [Color(0xFFD3D5D2), Color(0xFFCBCDCA)] : const [Color(0xFFE0E2DF), Color(0xFFD6D8D5)],
         ),
     );
-    // Inscription éclairée par-dessous : un halo, puis le trait net.
-    for (final glow in [true, false]) {
-      final ink = Paint()
-        ..color = glow ? _glow.withValues(alpha: 0.55) : _glow
-        ..maskFilter = glow ? const MaskFilter.blur(BlurStyle.normal, 3) : null;
-      _symbol(canvas, c, r, ink);
+    canvas.drawCircle(Offset.zero, 24.7, _line(const Color(0xFFAEB2AF), 1.1));
+    canvas.drawCircle(Offset.zero, 23.5, _line(const Color(0xFFF5F7F4).withValues(alpha: pressed ? 0.4 : 1), 1));
+    final ink = Paint()..color = _red;
+    if (zone == WheelZone.menu) {
+      final tp = TextPainter(
+        text: const TextSpan(
+          text: 'MENU',
+          style: TextStyle(fontFamily: 'Noto Sans', fontSize: 9.4, fontWeight: FontWeight.w700, letterSpacing: 0.2, color: _red),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(canvas, Offset(-tp.width / 2, 3.6 - tp.computeDistanceToActualBaseline(TextBaseline.alphabetic)));
+      tp.dispose();
+    } else {
+      canvas.translate(0, 0.2);
+      canvas.scale(1.15);
+      final icon = Path();
+      switch (zone) {
+        case WheelZone.previous:
+          icon
+            ..addRect(const Rect.fromLTWH(-6, -3.1, 1.5, 6.2))
+            ..addPolygon(const [Offset(-4.4, 0), Offset(-0.2, -3.1), Offset(-0.2, 3.1)], true)
+            ..addPolygon(const [Offset(-0.2, 0), Offset(4, -3.1), Offset(4, 3.1)], true);
+        case WheelZone.next:
+          icon
+            ..addPolygon(const [Offset(-4, -3.1), Offset(0.2, 0), Offset(-4, 3.1)], true)
+            ..addPolygon(const [Offset(0.2, -3.1), Offset(4.4, 0), Offset(0.2, 3.1)], true)
+            ..addRect(const Rect.fromLTWH(4.5, -3.1, 1.5, 6.2));
+        case WheelZone.playPause:
+          icon
+            ..addPolygon(const [Offset(-6.2, -3.3), Offset(-0.4, 0), Offset(-6.2, 3.3)], true)
+            ..addRect(const Rect.fromLTWH(1.3, -3.1, 1.6, 6.2))
+            ..addRect(const Rect.fromLTWH(4.4, -3.1, 1.6, 6.2));
+        case WheelZone.menu || WheelZone.center || WheelZone.none:
+          break;
+      }
+      canvas.drawPath(icon, ink);
     }
-  }
-
-  void _symbol(Canvas canvas, Offset c, double r, Paint ink) {
-    final k = r / 27;
-    switch (zone) {
-      case WheelZone.menu:
-        final tp = TextPainter(
-          text: TextSpan(
-            text: 'MENU',
-            style: TextStyle(
-              fontFamily: 'Noto Sans',
-              fontSize: 11 * k,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.4,
-              foreground: ink,
-            ),
-          ),
-          textDirection: TextDirection.ltr,
-        )..layout();
-        tp.paint(canvas, c - Offset(tp.width / 2, tp.height / 2));
-      case WheelZone.next || WheelZone.previous:
-        final dir = zone == WheelZone.next ? 1.0 : -1.0;
-        final h = 7 * k;
-        final w = 7 * k;
-        for (final dx in [-w, 0.0]) {
-          final x0 = c.dx + dx * dir;
-          canvas.drawPath(
-            Path()
-              ..moveTo(x0, c.dy - h)
-              ..lineTo(x0 + w * dir, c.dy)
-              ..lineTo(x0, c.dy + h)
-              ..close(),
-            ink,
-          );
-        }
-        final bar = c.dx + w * dir;
-        canvas.drawRect(
-          Rect.fromLTRB(math.min(bar, bar + 2 * k * dir), c.dy - h, math.max(bar, bar + 2 * k * dir), c.dy + h),
-          ink,
-        );
-      case WheelZone.playPause:
-        final h = 6.5 * k;
-        canvas.drawPath(
-          Path()
-            ..moveTo(c.dx - 10 * k, c.dy - h)
-            ..lineTo(c.dx + 1 * k, c.dy)
-            ..lineTo(c.dx - 10 * k, c.dy + h)
-            ..close(),
-          ink,
-        );
-        canvas.drawRect(Rect.fromLTWH(c.dx + 3.5 * k, c.dy - h, 2.5 * k, h * 2), ink);
-        canvas.drawRect(Rect.fromLTWH(c.dx + 8.5 * k, c.dy - h, 2.5 * k, h * 2), ink);
-      case WheelZone.center || WheelZone.none:
-        break;
-    }
+    canvas.restore();
   }
 
   @override
-  bool shouldRepaint(covariant _BacklitButtonPainter old) => old.pressed != pressed || old.zone != zone;
+  bool shouldRepaint(covariant _ThirdGenButtonPainter old) => old.pressed != pressed || old.zone != zone;
 }

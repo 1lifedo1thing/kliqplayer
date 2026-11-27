@@ -287,7 +287,9 @@ class _DeviceBodyState extends State<DeviceBody> {
                 onPanUpdate: (d) => widget.onHoldUpdate?.call(d.globalPosition),
                 onPanEnd: (_) => widget.onHoldEnd?.call(),
                 onPanCancel: () => widget.onHoldEnd?.call(),
-                child: CustomPaint(painter: m.body),
+                // Couche à part : un appui (bouton, molette, verrou) ne fait pas
+                // redessiner le boîtier, ni ses ombres floues.
+                child: RepaintBoundary(child: CustomPaint(painter: m.body)),
               ),
             ),
             ?_holdTouch(m),
