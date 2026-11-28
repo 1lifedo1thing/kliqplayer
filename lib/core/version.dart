@@ -132,7 +132,8 @@ Future<bool> prepareUpdate({void Function()? onStep}) async {
     final args = ['$pid', target.path, fresh, path('old'), work.path, log.path];
     final env = {'KP_FAILED': tr('La mise à jour n\'a pas pu s\'installer. Détails :')};
     if (Platform.isWindows) {
-      File(path('swap.ps1')).writeAsStringSync(_swapPs1);
+      // (Avec BOM : sans lui, Windows PowerShell lit le script en ANSI.)
+      File(path('swap.ps1')).writeAsStringSync('\uFEFF$_swapPs1');
       await Process.start(
           'powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', path('swap.ps1'), ...args],
           mode: ProcessStartMode.detached, workingDirectory: target.parent.path, environment: env);
@@ -185,7 +186,13 @@ rm -rf "$4"
 
 const _swapPs1 = r'''
 param($procId, $target, $fresh, $old, $work, $log)
-function Note($s) { Add-Content -LiteralPath $log -Value ("{0:s}  {1}" -f (Get-Date), $s) -ErrorAction SilentlyContinue }
+# Journal à côté du dossier, ou dans %TEMP% si on ne peut pas y écrire.
+function Note($s) {
+  $line = "{0:s}  {1}" -f (Get-Date), $s
+  try { Add-Content -LiteralPath $log -Value $line -ErrorAction Stop }
+  catch { Add-Content -LiteralPath (Join-Path $env:TEMP 'kliqplayer-update.log') -Value "$line  ($_)" -ErrorAction SilentlyContinue }
+}
+Note 'script démarré'
 $problem = $null
 # Au plus 20 s pour que l'appli se ferme, sinon on la ferme.
 Wait-Process -Id $procId -Timeout 20 -ErrorAction SilentlyContinue
@@ -206,8 +213,10 @@ if ($moved) {
   catch { $problem = $_; Move-Item -LiteralPath $old -Destination $target; $moved = $false }
 }
 if (-not $moved) { Note "échec de l'échange : $problem" }
+# Relancée par l'Explorateur, comme d'un double-clic : lancée d'ici, elle
+# hériterait de la fenêtre cachée de ce script et ne s'afficherait pas.
 try {
-  Start-Process -FilePath (Join-Path $target 'kliqplayer.exe') -WorkingDirectory $target -ErrorAction Stop
+  Start-Process -FilePath 'explorer.exe' -ArgumentList ('"' + (Join-Path $target 'kliqplayer.exe') + '"') -ErrorAction Stop
   Note 'relancée'
 } catch { $problem = $_; $moved = $false; Note "relance impossible : $problem" }
 if (-not $moved) {
