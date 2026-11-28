@@ -154,7 +154,7 @@
   .slot-label { min-height: 2.4em; /* always two lines, so one-line names don't shift their iPod */ font: 600 8.5px/1.2 "Source Sans 3", sans-serif; letter-spacing: .2em; text-transform: uppercase; color: #8b8d90; text-shadow: 0 -1px 0 #000; }
 
   /* Features */
-  .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; }
+  .features { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; }
   .feature { padding: 0 26px; border-left: 1px solid var(--hair); }
   .feature:first-child { border-left: 0; }
   .feature-img { position: relative; aspect-ratio: 1; margin-bottom: 18px; }
@@ -204,6 +204,44 @@
     background: linear-gradient(#fafafa, #e4e6e9); box-shadow: inset 0 1px 1px #fff, 0 0 0 1px #cfd3d7;
   }
   .wheel .center:active { background: linear-gradient(#e4e6e9, #fafafa); }
+
+  /* A fake iPod screen driven by the keyboard, with the app's three key layouts */
+  .kbd-box {
+    display: grid; place-items: center; aspect-ratio: 1; margin-bottom: 18px; border-radius: 14px;
+    background: linear-gradient(100deg, #b9bbbd, #e4e5e6 30%, #cfd0d2 55%, #a7a9ab);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.6), inset 0 -1px 2px rgba(0,0,0,.15);
+  }
+  .kbd-inner { width: 80%; }
+  .ipod-screen {
+    position: relative; aspect-ratio: 4 / 3; border-radius: 6px; overflow: hidden; outline: none;
+    background: #fbfbfc; border: 5px solid #0d0d0e; box-shadow: 0 0 0 1px rgba(0,0,0,.25), 0 2px 6px rgba(0,0,0,.2);
+    font: 600 11px/1 "Source Sans 3", "Helvetica Neue", Arial, sans-serif; color: #111; cursor: pointer;
+  }
+  .ipod-screen:focus-visible { box-shadow: 0 0 0 1px rgba(0,0,0,.25), 0 0 0 3px #7ab8f5; }
+  .ipod-screen .tbar {
+    display: flex; justify-content: center; align-items: center; height: 15%; position: relative;
+    background: linear-gradient(#f4f5f7, #d3d6dc); border-bottom: 1px solid #9a9da5; font-weight: 700;
+  }
+  .ipod-screen .tbar i { position: absolute; right: 6px; top: 50%; width: 15px; height: 7px; transform: translateY(-50%);
+    border: 1px solid #3a3c44; border-radius: 1px; background: linear-gradient(90deg, #58b44a 80%, transparent 80%); }
+  .ipod-screen ul { list-style: none; margin: 0; padding: 0; }
+  .ipod-screen li { display: flex; justify-content: space-between; align-items: center; height: 14.2%; padding: 0 7px; }
+  .ipod-screen li.sel { color: #fff; background: linear-gradient(#6aa6ec, #2f7ad6 50%, #1f62bc); }
+  .ipod-screen li.sub::after { content: "›"; font-weight: 700; }
+  .ipod-screen .list { height: 85%; display: flex; flex-direction: column; }
+  .ipod-screen .list li { flex: 0 0 calc(100% / 6); height: auto; }
+  .ipod-screen .np { height: 85%; display: grid; place-content: center; text-align: center; gap: 4px; font-weight: 600; }
+  .ipod-screen .np small { font-weight: 400; color: #555; }
+  .ipod-screen .np .prog { width: 120px; height: 5px; margin: 6px auto 0; border-radius: 3px; background: #d7dbe0; overflow: hidden; }
+  .ipod-screen .np .prog b { display: block; height: 100%; width: 35%; background: linear-gradient(#6aa6ec, #2f7ad6); }
+  .layouts { display: flex; justify-content: center; gap: 4px; margin-top: 9px; }
+  .layouts button {
+    font: 700 9px/1 "Source Sans 3", sans-serif; letter-spacing: .04em; padding: 4px 6px; border-radius: 999px; cursor: pointer; white-space: nowrap;
+    color: #5b6168; background: linear-gradient(#fff, #e9eaec); border: 1px solid #b9bcc0;
+  }
+  .layouts button[aria-pressed="true"] { color: #fff; background: linear-gradient(#6cb3fa, #2a7fe0 50%, #1a6fd4 51%, #3d8fe8); border-color: #1660b9; }
+  .keyhint { margin: 6px 0 0; text-align: center; font-size: 10px; line-height: 1.3; color: #4b5056; white-space: nowrap; }
+  .keyhint kbd { font: 700 9px "Source Sans 3", sans-serif; padding: 0 3px; border: 1px solid #9ea2a7; border-radius: 3px; background: #f6f6f7; }
 
   @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 </style>
@@ -270,6 +308,19 @@
         <div class="feature-img"><img src="img/features/web/now_playing.webp" alt="A silver classic playing Sir Duke by Stevie Wonder, with its album art"></div>
         <h3>A Spotify account or your own music…</h3>
         <p>Your own folder (MP3, FLAC, AAC, OGG, WAV, playlists), or your Spotify Premium library.</p>
+      </div>
+      <div class="feature">
+        <div class="kbd-box"><div class="kbd-inner">
+          <div class="ipod-screen" tabindex="0" role="application" aria-label="iPod menu: use the keys below to move, open and go back"></div>
+          <div class="layouts" role="group" aria-label="Key layout">
+            <button data-keys="hjkl" aria-pressed="true">H J K L</button>
+            <button data-keys="wasd" aria-pressed="false">W A S D</button>
+            <button data-keys="zqsd" aria-pressed="false">Z Q S D</button>
+          </div>
+          <div class="keyhint"></div>
+        </div></div>
+        <h3>…or your keyboard.</h3>
+        <p>Pick your keys and browse without touching the mouse. Click the screen, then try it.</p>
       </div>
     </div>
   </section>
@@ -452,6 +503,79 @@
   wheel.addEventListener('pointerup', stop);
   wheel.addEventListener('pointercancel', stop);
   for (const b of wheel.querySelectorAll('button')) b.onclick = tick;
+
+  // The keyboard demo: a fake menu, the app's three layouts (up, down, open, back), arrows and Enter too.
+  const LAYOUTS = { hjkl: 'kjlh', wasd: 'wsda', zqsd: 'zsdq' }; // up, down, open, back
+  const song = (t, a) => ({ name: t, song: [t, a] });
+  const songs = [song('Sir Duke', 'Stevie Wonder'), song('Starless', 'King Crimson'), song('Northern Sky', 'Nick Drake'),
+    song('Close to the Edge', 'Yes'), song('I Am the Walrus', 'The Beatles'), song('Birds Dont Sing', 'TV Girl')];
+  const MENU = { name: 'iPod', items: [
+    { name: 'Music', items: [
+      { name: 'Playlists', items: [{ name: 'Recently Added', items: songs.slice(0, 4) }, { name: 'Top 25 Most Played', items: songs.slice(2) }] },
+      { name: 'Artists', items: songs.map(s => ({ name: s.song[1], items: [s] })) },
+      { name: 'Songs', items: songs },
+      { name: 'Genres', items: [{ name: 'Progressive Rock', items: [songs[1], songs[3]] }, { name: 'Soul', items: [songs[0]] }] },
+    ] },
+    { name: 'Videos', items: [{ name: 'Movies' }, { name: 'Music Videos' }] },
+    { name: 'Photos', items: [{ name: 'Library' }, { name: 'Slideshow' }] },
+    { name: 'Extras', items: [{ name: 'Clock' }, { name: 'Games' }, { name: 'Notes' }] },
+    { name: 'Settings', items: [{ name: 'Shuffle' }, { name: 'Repeat' }, { name: 'Backlight' }, { name: 'Clicker' }] },
+    { name: 'Shuffle Songs', song: songs[2].song },
+    { name: 'Now Playing', song: songs[0].song },
+  ] };
+  const screen = document.querySelector('.ipod-screen'), hint = document.querySelector('.keyhint');
+  let layout = 'hjkl', stack = [{ menu: MENU, sel: 0, top: 0 }], playing = null;
+  const esc = t => t.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+  function draw() {
+    const f = stack[stack.length - 1];
+    const title = playing ? 'Now Playing' : f.menu.name;
+    let body;
+    if (playing) {
+      body = `<div class="np"><span>${esc(playing[0])}</span><small>${esc(playing[1])}</small><div class="prog"><b></b></div></div>`;
+    } else {
+      const rows = f.menu.items.slice(f.top, f.top + 6);
+      body = '<ul class="list">' + rows.map((it, i) => `<li class="${f.top + i === f.sel ? 'sel' : ''}${it.items ? ' sub' : ''}">${esc(it.name)}</li>`).join('') + '</ul>';
+    }
+    screen.innerHTML = `<div class="tbar">${esc(title)}<i></i></div>${body}`;
+    const k = LAYOUTS[layout].toUpperCase();
+    hint.innerHTML = `<kbd>${k[0]}</kbd><kbd>${k[1]}</kbd> move · <kbd>${k[2]}</kbd> open · <kbd>${k[3]}</kbd> back`;
+  }
+  function act(what) {
+    const f = stack[stack.length - 1];
+    if (what === 'back') {
+      if (playing) playing = null; else if (stack.length > 1) stack.pop(); else return;
+    } else if (playing) {
+      return;
+    } else if (what === 'up' || what === 'down') {
+      const next = Math.max(0, Math.min(f.menu.items.length - 1, f.sel + (what === 'up' ? -1 : 1)));
+      if (next === f.sel) return;
+      f.sel = next;
+      if (f.sel < f.top) f.top = f.sel;
+      if (f.sel >= f.top + 6) f.top = f.sel - 5;
+    } else {
+      const it = f.menu.items[f.sel];
+      if (it.items) stack.push({ menu: it, sel: 0, top: 0 });
+      else if (it.song) playing = it.song;
+      else return;
+    }
+    tick(); draw();
+  }
+  screen.addEventListener('keydown', e => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const keys = LAYOUTS[layout], key = e.key.toLowerCase();
+    const what = { ArrowUp: 'up', ArrowDown: 'down', Enter: 'open', ArrowRight: 'open', Backspace: 'back', ArrowLeft: 'back', Escape: 'back' }[e.key]
+      ?? ['up', 'down', 'open', 'back'][keys.indexOf(key)];
+    if (!what) return;
+    e.preventDefault(); // no page scroll while browsing
+    act(what);
+  });
+  screen.addEventListener('click', () => screen.focus());
+  for (const b of document.querySelectorAll('.layouts button')) b.onclick = () => {
+    layout = b.dataset.keys;
+    for (const o of document.querySelectorAll('.layouts button')) o.setAttribute('aria-pressed', o === b);
+    draw(); screen.focus();
+  };
+  draw();
 </script>
 </body>
 </html>
