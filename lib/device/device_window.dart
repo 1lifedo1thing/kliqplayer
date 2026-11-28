@@ -162,9 +162,6 @@ mixin _ManagedWindow on State<DeviceStage> {
   /// glisse jusqu'à sa place dans la fenêtre, qui va occuper [window].
   void _glideHome(Offset from, Rect window);
 
-  /// L'appareil revient au milieu de la fenêtre.
-  void _recenter();
-
   /// Taille choisie avec les poignées des coins du bas.
   double get _userScale;
 
@@ -412,7 +409,6 @@ mixin _ManagedWindow on State<DeviceStage> {
     } else {
       // Sorti de sa zone : le plein écran, et lui au milieu.
       _dock = null;
-      _recenter();
       if (!grown) _fillHidden(win);
       _glideHome(center, _windowNow);
     }
@@ -551,7 +547,6 @@ mixin _ManagedWindow on State<DeviceStage> {
       if (maximized) win.unmaximize();
       // Sortie de sa zone (au clavier) : le baladeur au milieu. Puis le plein
       // écran, où il rejoint sa place.
-      if (_dock != null) _recenter();
       _dock = null;
       final filled = fillWorkArea(win) ?? area;
       _lastFill = filled.size;

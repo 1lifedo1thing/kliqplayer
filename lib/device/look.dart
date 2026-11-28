@@ -92,8 +92,8 @@ class Marquee extends StatefulWidget {
 }
 
 class MarqueeState extends State<Marquee> with SingleTickerProviderStateMixin {
-  static const _pause = 1.4; // secondes à chaque bout
-  static const _speed = 34.0; // pixels par seconde
+  static const _pause = 2.5; // secondes à chaque bout
+  static const _speed = 18.0; // pixels par seconde
 
   late final Ticker _ticker = createTicker(_tick);
   double _overflow = 0;
@@ -155,7 +155,10 @@ class MarqueeState extends State<Marquee> with SingleTickerProviderStateMixin {
       return SizedBox(
         width: box.maxWidth,
         height: tp.height,
+        // (Coupé à gauche et à droite seulement : avec une hauteur de ligne de 1,
+        // les jambages des p, g, q dépassent sous la ligne.)
         child: ClipRect(
+          clipper: const _SidesClip(),
           child: OverflowBox(
             alignment: Alignment.centerLeft,
             maxWidth: double.infinity,
@@ -168,5 +171,15 @@ class MarqueeState extends State<Marquee> with SingleTickerProviderStateMixin {
       );
     });
   }
+}
+
+class _SidesClip extends CustomClipper<Rect> {
+  const _SidesClip();
+
+  @override
+  Rect getClip(Size size) => Rect.fromLTRB(0, -size.height, size.width, size.height * 2);
+
+  @override
+  bool shouldReclip(_SidesClip oldClipper) => false;
 }
 

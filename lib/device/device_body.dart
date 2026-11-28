@@ -68,7 +68,7 @@ class _DeviceBodyState extends State<DeviceBody> {
   bool get _switchOn => widget.model.hasScreen ? _nav.locked : !widget.player.forcedShuffle;
 
   void _flipSwitch() {
-    WheelClick.instance.play();
+    WheelClick.instance.hold();
     if (widget.model.hasScreen) {
       _nav.toggleLock();
     } else {
@@ -366,22 +366,28 @@ class _DeviceBodyState extends State<DeviceBody> {
       height: HoldPainter.depth,
       child: ListenableBuilder(
         listenable: Listenable.merge([_nav, widget.player]),
-        builder: (context, _) => CustomPaint(painter: HoldPainter(h, on: _switchOn)),
+        // Le curseur glisse d'un bout à l'autre, il ne saute pas.
+        builder: (context, _) => TweenAnimationBuilder<double>(
+          tween: Tween(end: _switchOn ? 1 : 0),
+          duration: const Duration(milliseconds: 120),
+          curve: Curves.easeOut,
+          builder: (context, on, _) => CustomPaint(painter: HoldPainter(h, on: on)),
+        ),
       ),
     );
   }
 
   /// Où on clique pour le pousser : le bord du boîtier, juste sous lui (ce
-  /// qui dépasse est trop fin, et hors du boîtier).
+  /// qui dépasse est trop fin, et hors du boîtier). Large, facile à viser.
   Widget? _holdTouch(DeviceModel m) {
     final h = m.hold;
     if (h == null) return null;
     return Positioned(
-      left: h.x - h.width / 2 - 4,
+      left: h.x - h.width / 2 - 14,
       top: h.onTop ? 0 : null,
       bottom: h.onTop ? null : 0,
-      width: h.width + 8,
-      height: 12,
+      width: h.width + 28,
+      height: 22,
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
         child: GestureDetector(

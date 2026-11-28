@@ -176,6 +176,19 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
   /// tout près des coins).
   bool _overWheel = false;
 
+  /// Les poignées (tiroir, déplacement, taille) restent cachées : souris sur
+  /// la molette, ou verrou mis.
+  bool get _handsOff => _overWheel || _nav.locked;
+
+  /// Le verrou vient de changer : les poignées rentrent ou peuvent ressortir.
+  bool _lockSeen = false;
+  void _lockChanged() {
+    if (_nav.locked == _lockSeen) return;
+    _lockSeen = _nav.locked;
+    setState(() {});
+    _kick();
+  }
+
   /// La molette à l'écran (centre et rayon), relevée à chaque construction.
   Offset _wheelAt = Offset.zero;
   double _wheelRadius = 0;
@@ -277,7 +290,7 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
   Widget _resizeGrip(int side, Rect dev, double corner, double openC) {
     final k = _tabScale(dev);
     final width = 40.0 * k, height = 30.0 * k, reach = 22.0 * k;
-    final shown = _canResize && openC < 0.05 && _phase == _Swap.none && (_nearGrip == side || _resizing == side);
+    final shown = _canResize && !_nav.locked && openC < 0.05 && _phase == _Swap.none && (_nearGrip == side || _resizing == side);
     final hidden = side > 0 ? 0.0 : reach, out = side > 0 ? reach : 0.0;
     return Positioned(
       left: side > 0 ? dev.right - width : dev.left - reach,
@@ -322,58 +335,6 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
     );
   }
   bool _wantOpen = false;
-
-  // --- Place du baladeur dans la fenêtre : à gauche, au milieu, à droite -------
-
-  static const _placeKey = 'device.place';
-  static const _placeNames = {-1: 'gauche', 0: 'milieu', 1: 'droite'};
-
-  /// Où le baladeur se tient, tiroir fermé : -1 à gauche, 0 au milieu, 1 à droite
-  /// (retenu d'un lancement à l'autre).
-  late int _placeTarget = _remember
-      ? _placeNames.entries.firstWhere((e) => e.value == Settings.getString(_placeKey), orElse: () => const MapEntry(0, '')).key
-      : 0;
-
-  /// Position actuelle, en route vers [_placeTarget].
-  late final _place = Spring(_placeTarget.toDouble(), stiffness: 150, damping: 0.86);
-
-  /// Les boutons de déplacement, sous les poignées du tiroir : ils sortent
-  /// avec elles quand la souris approche d'un coin du haut (gauche, droite).
-  final _movePeekL = Spring(0, stiffness: 420, damping: 0.9);
-  final _movePeekR = Spring(0, stiffness: 420, damping: 0.9);
-  int _hoverMove = 0;
-
-  /// Course possible du baladeur jusqu'au bord, à la dernière mise en page.
-  double _placeReach = 0;
-
-  /// Sous ce débattement, la fenêtre est trop étroite pour qu'on déplace
-  /// le baladeur (ou c'est l'appli qui règle la fenêtre autour de lui).
-  bool get _canPlace =>
-      _placeReach >= 40 && !_wantOpen && _phase == _Swap.none && deviceLanded.value && !(deviceFree.value && _dragsInside);
-
-  /// Il reste de la place de ce côté (à gauche, on ne va pas plus à gauche).
-  bool _canMove(int side) => _canPlace && (_placeTarget + side).abs() <= 1;
-
-  void _setHoverMove(int side, bool inside) {
-    final next = inside ? side : (_hoverMove == side ? 0 : _hoverMove);
-    if (next == _hoverMove) return;
-    _hoverMove = next;
-    _kick();
-  }
-
-  /// D'un cran vers [side] : de droite au milieu, du milieu à gauche…
-  void _nudge(int side) {
-    if (!_canMove(side)) return;
-    _moveTo(_placeTarget + side);
-    WheelClick.instance.play();
-  }
-
-  void _moveTo(int place) {
-    if (!_canPlace || place == _placeTarget) return;
-    _placeTarget = place;
-    if (_remember) Settings.setString(_placeKey, _placeNames[place]!);
-    _kick();
-  }
 
   // Lâché après avoir été tenu (Windows) : le baladeur glisse d'où on l'a posé
   // jusqu'à sa place. Le décalage qui reste à parcourir, ramené à zéro.
@@ -501,15 +462,6 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
   @visibleForTesting
   void debugGlideHome(Offset from, Rect window) => _glideHome(from, window);
 
-  @override
-  void _recenter() {
-    _placeTarget = 0;
-    _place
-      ..value = 0
-      ..velocity = 0;
-    if (_remember) Settings.setString(_placeKey, _placeNames[0]!);
-  }
-
   /// Décalage vertical du tiroir quand on le tire de travers : un ressort
   /// le ramène toujours dans l'axe.
   final _lift = Spring(0, stiffness: 420, damping: 0.8);
@@ -617,6 +569,7 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
     WidgetsBinding.instance.addPostFrameCallback((_) => _limitWindow());
     _takeFullWindow();
     deviceFree.addListener(_freeChanged);
+    _nav.addListener(_lockChanged);
     _focusWatch; // (créé maintenant : il n'écoute qu'une fois construit)
     // (En position libre, il arrive tout de suite là où on l'avait laissé.)
     _backX.value = _backRest.dx;
@@ -654,6 +607,7 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
   void dispose() {
     deviceLanded.removeListener(_landed);
     deviceFree.removeListener(_freeChanged);
+    _nav.removeListener(_lockChanged);
     _focusWatch.dispose();
     _lit.dispose();
     _liveTimer?.cancel();
@@ -697,8 +651,6 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
       }
       if (_lift.isSettled) _lift.value = 0;
     }
-    _place.step(_placeTarget.toDouble(), dt);
-    if (_place.isSettled) _place.value = _placeTarget.toDouble();
     if (!_backHeld) {
       final rest = _backRest;
       for (final (back, to) in [(_backX, rest.dx), (_backY, rest.dy)]) {
@@ -707,16 +659,8 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
       }
     }
     for (final (peek, side) in [(_peekL, -1), (_peekR, 1)]) {
-      // Les deux boutons d'un coin sortent ensemble, quel que soit celui
-      // qu'on approche.
-      final near = (_hoverSide == side || _hoverMove == side) && !_overWheel;
+      final near = _hoverSide == side && !_handsOff;
       final target = near && !_wantOpen && !_dragging ? 1.0 : 0.0;
-      peek.step(target, dt);
-      if (peek.isSettled) peek.value = target;
-    }
-    for (final (peek, side) in [(_movePeekL, -1), (_movePeekR, 1)]) {
-      final near = (_hoverSide == side || _hoverMove == side) && !_overWheel;
-      final target = near && _canMove(side) && !_dragging ? 1.0 : 0.0;
       peek.step(target, dt);
       if (peek.isSettled) peek.value = target;
     }
@@ -742,10 +686,7 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
         _peekL.isSettled &&
         _peekR.isSettled &&
         _lift.isSettled &&
-        _place.isSettled &&
         (_backHeld || (_backX.isSettled && _backY.isSettled)) &&
-        _movePeekL.isSettled &&
-        _movePeekR.isSettled &&
         _swaySettled &&
         _glow == (_focused ? 1 : 0) &&
         _geoFrom == null &&
@@ -1102,7 +1043,7 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
     // qu'une photo : débranché, en vol, rebranché. Impeller repeindrait
     // sinon à chaque image tout l'appareil, ombres floues comprises.
     final flying = _phase != _Swap.none && _phase != _Swap.poweringOff;
-    final moving = _dragging || !_open.isSettled || !_place.isSettled;
+    final moving = _dragging || !_open.isSettled;
     _deviceSnap.allowSnapshotting = (moving && _phase == _Swap.none || flying) && !_hideDevice;
   }
 
@@ -1393,8 +1334,7 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
     final k = _tabScale(dev);
     final width = 40.0 * k, height = 46.0 * k, reach = 22.0 * k;
     // Zone sensible bien au-delà du flanc, même quand on ne voit rien : au
-    // dessus de la poignée, et en dessous jusqu'à mi-chemin du bouton de
-    // déplacement (qui prend la suite, voir [_moveHandle]).
+    // dessus de la poignée, et un peu en dessous.
     final zone = 60.0 * k, above = 24.0 * k, below = 4.0 * k;
     final out = peek * reach;
     final top = dev.top + corner + 10 * k;
@@ -1404,7 +1344,7 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
       width: width + zone,
       height: above + height + below,
       child: IgnorePointer(
-        ignoring: openC > 0.05 || _overWheel,
+        ignoring: openC > 0.05 || _handsOff,
         child: MouseRegion(
           cursor: SystemMouseCursors.click,
           onEnter: (_) => _setHoverSide(side, true),
@@ -1426,53 +1366,6 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
                   child: Opacity(
                     opacity: (peek.clamp(0.0, 1.0) * (1 - openC)).toDouble(),
                     child: CustomPaint(painter: _HandlePainter(side)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Bouton de déplacement, juste sous la poignée du tiroir, du même métal :
-  /// une flèche à la place de l'encoche. Cliqué, le baladeur va d'un cran de ce
-  /// côté de la fenêtre.
-  Widget _moveHandle(int side, Rect dev, double corner, double openC) {
-    final peek = (side < 0 ? _movePeekL : _movePeekR).value;
-    // Zone sensible : même largeur que celle de la poignée du tiroir, depuis
-    // la fin de la sienne (mi-écart) jusqu'un peu sous le bouton.
-    final k = _tabScale(dev);
-    final width = 40.0 * k, height = 30.0 * k, reach = 22.0 * k, zone = 60.0 * k, above = 4.0 * k, below = 20.0 * k;
-    final out = peek * reach;
-    // Sous la poignée du tiroir (46 de haut), avec un petit écart.
-    final top = dev.top + corner + (10 + 46 + 8) * k;
-    final active = _canMove(side) && openC < 0.05;
-    return Positioned(
-      left: side > 0 ? dev.right - width : dev.left - zone,
-      top: top - above,
-      width: width + zone,
-      height: above + height + below,
-      child: IgnorePointer(
-        ignoring: openC > 0.05 || _overWheel,
-        child: MouseRegion(
-          cursor: active ? SystemMouseCursors.click : MouseCursor.defer,
-          onEnter: (_) => _setHoverMove(side, true),
-          onExit: (_) => _setHoverMove(side, false),
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => _nudge(side),
-            child: Stack(
-              children: [
-                Positioned(
-                  left: side > 0 ? out : zone - out,
-                  top: above,
-                  width: width,
-                  height: height,
-                  child: Opacity(
-                    opacity: (peek.clamp(0.0, 1.0) * (1 - openC)).toDouble(),
-                    child: CustomPaint(painter: _HandlePainter(side, arrow: true)),
                   ),
                 ),
               ],
@@ -1506,11 +1399,8 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
             ),
           ),
         );
-    // Mêmes bornes verticales que [_handle] et [_moveHandle].
-    return [
-      region(top - 24 * k, top + 50 * k, _setHoverSide),
-      region(top + 50 * k, top + 104 * k, _setHoverMove),
-    ];
+    // Mêmes bornes verticales que [_handle].
+    return [region(top - 24 * k, top + 50 * k, _setHoverSide)];
   }
 
   @override
@@ -1585,11 +1475,7 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
           final u = _sizeScale;
           if (u != 1) device = Transform.scale(scale: u, origin: g.device.center - Offset(w / 2, h / 2), child: device);
           final scale = 1 + (g.room - 1) * openC;
-          // Sa place à gauche ou à droite : tiroir ouvert, il revient au
-          // milieu avec lui.
-          _placeReach = _managedPadding(w, h) != null ? 0 : math.max(0.0, g.device.left - 14);
-          final placed = _place.value * _placeReach;
-          final shift = (_deviceShift = (right ? g.shiftRight : g.shiftLeft) * open) + placed * (1 - openC);
+          final shift = _deviceShift = (right ? g.shiftRight : g.shiftLeft) * open;
           if (shift != 0 || scale != 1) {
             device = Transform.translate(
               offset: Offset(shift, 0),
@@ -1686,7 +1572,6 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
                 _dragging ||
                 _phase != _Swap.none ||
                 _geoFrom != null ||
-                !_place.isSettled ||
                 !deviceLanded.value,
           );
 
@@ -1720,8 +1605,6 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
                 ),
                 // Les deux poignées, derrière les coins du haut.
                 for (final side in const [-1, 1]) _handle(side, dev, g.cornerRadius * scale * u, openC),
-                // Et sous chacune, le bouton qui décale le baladeur de ce côté.
-                for (final side in const [-1, 1]) _moveHandle(side, dev, g.cornerRadius * scale * u, openC),
                 // Derrière les coins du bas, celles qui le redimensionnent.
                 for (final side in const [-1, 1]) _resizeGrip(side, dev, g.cornerRadius * scale * u, openC),
                 // Le tiroir, derrière l'appareil, d'où il émerge. Coupé au

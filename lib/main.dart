@@ -232,7 +232,7 @@ void _cleanOldSettings() {
     final value = Settings.getString('$old$key');
     if (value != null && Settings.getString('device.$key') == null) Settings.setString('device.$key', value);
   }
-  Settings.remove(['deck', '${old}zoom', 'spotify.device', for (final key in moved) '$old$key']);
+  Settings.remove(['deck', '${old}zoom', 'spotify.device', 'device.place', for (final key in moved) '$old$key']);
 }
 
 /// Au lancement, le baladeur monte du bas de la fenêtre jusqu'à sa place.

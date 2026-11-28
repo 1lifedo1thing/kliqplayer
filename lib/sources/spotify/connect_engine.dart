@@ -468,15 +468,31 @@ class SpotifyConnectEngine extends PlaybackEngine {
     });
   }
 
-  Timer? _volumeTimer;
+  /// Volume à envoyer dès que le précédent est arrivé (null : rien).
+  double? _volumeWanted;
+  bool _volumeSending = false;
 
   @override
   Future<void> setVolume(double volume) async {
+    // En direct pendant qu'on tourne la molette : envoyé tout de suite, puis
+    // toujours le plus récent, un à la fois (Spotify limite les demandes).
     _quiet(1500);
-    _volumeTimer?.cancel();
-    _volumeTimer = Timer(const Duration(milliseconds: 200), () {
-      _api.put('/me/player/volume', query: {'volume_percent': '${volume.round()}'}).then((_) => _soon(), onError: (_) {});
-    });
+    _volumeWanted = volume;
+    if (_volumeSending) return;
+    _volumeSending = true;
+    try {
+      for (var v = _volumeWanted; v != null; v = _volumeWanted) {
+        _volumeWanted = null;
+        try {
+          await _api.put('/me/player/volume', query: {'volume_percent': '${v.round()}'});
+        } catch (_) {}
+        if (_disposed) return;
+        if (_volumeWanted != null) await Future<void>.delayed(const Duration(milliseconds: 120));
+      }
+    } finally {
+      _volumeSending = false;
+    }
+    _soon();
   }
 
   @override
@@ -488,7 +504,7 @@ class SpotifyConnectEngine extends PlaybackEngine {
 
   @override
   Future<void> mute(bool on, double volume) async {
-    _volumeTimer?.cancel();
+    _volumeWanted = null;
     _quiet(1500);
     if (on) Settings.setString(_mutedKey, '${volume.round()}');
     try {
@@ -554,6 +570,5 @@ class SpotifyConnectEngine extends PlaybackEngine {
     _disposed = true;
     _timer?.cancel();
     _seekTimer?.cancel();
-    _volumeTimer?.cancel();
   }
 }

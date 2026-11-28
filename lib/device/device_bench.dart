@@ -140,19 +140,6 @@ extension _Bench on _DeviceStageState {
         await wait(600);
       }
     });
-    // Le baladeur d'un bord à l'autre de la fenêtre, puis remis à sa place.
-    final place = _placeTarget;
-    if (_canPlace) {
-      await run('déplacer', () async {
-        for (final to in [-1, 1, 0]) {
-          stdout.writeln('[bench]   vers $to @${now() - t0}ms');
-          _moveTo(to);
-          await wait(900);
-        }
-      });
-      _moveTo(place);
-      await wait(900);
-    }
     await run('tiroir', () async {
       for (final open in [true, false, true, false]) {
         _setOpen(open);

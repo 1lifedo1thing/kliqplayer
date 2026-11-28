@@ -19,6 +19,9 @@ class WheelClick {
 
   /// Un son par tonalité, synthétisés d'un coup (quelques Ko chacun).
   List<AudioSource>? _sources;
+
+  /// Le « tac » du verrou qu'on pousse.
+  AudioSource? _holdSource;
   Future<void>? _loading;
 
   /// Tonalité choisie (index dans [pitches]).
@@ -41,6 +44,18 @@ class WheelClick {
       for (var i = 0; i < pitches.length; i++)
         await soloud.loadMem('wheel-click-$i.wav', _synthesize(pitches[i])),
     ];
+    _holdSource = await soloud.loadMem('hold-tack.wav', _synthesizeTack());
+  }
+
+  /// Le verrou poussé : un « tac », joué même quand le clic de la molette
+  /// est coupé (c'est un bruit mécanique, comme la prise).
+  void hold() {
+    final source = _holdSource;
+    if (source == null) {
+      warmUp();
+      return;
+    }
+    SoLoud.instance.play(source, volume: volume);
   }
 
   /// Joue le clic ; sans effet (et sans erreur) si l'audio n'est pas prêt.
@@ -84,6 +99,33 @@ class WheelClick {
       samples[i] = (v.clamp(-1.0, 1.0) * 32767).round();
     }
 
+    return wav(samples, rate);
+  }
+
+  /// WAV mono 16 bits : un « tac » de plastique, sec et assez mat. Un choc
+  /// (souffle filtré, dans les médiums) et la petite résonance du curseur
+  /// qui bute au bout de sa fente, éteints en une vingtaine de millisecondes.
+  static Uint8List _synthesizeTack() {
+    const rate = 44100;
+    const n = rate * 25 ~/ 1000; // 25 ms
+    final rnd = math.Random(3);
+    final samples = Int16List(n);
+    var lp = 0.0, lp2 = 0.0;
+    for (var i = 0; i < n; i++) {
+      final t = i / rate;
+      final noise = rnd.nextDouble() * 2 - 1;
+      // Filtré deux fois : le choc reste dans les médiums, sans grésillement.
+      lp += (noise - lp) * 0.38;
+      lp2 += (lp - lp2) * 0.38;
+      final knock = lp2 * 2.2 * math.exp(-t / 0.0018);
+      // Résonance du boîtier, dont la hauteur tombe un peu : « tac », pas « tic ».
+      final f = 820 + 380 * math.exp(-t / 0.003);
+      final body = math.sin(2 * math.pi * f * t) * math.exp(-t / 0.0045);
+      final click = math.sin(2 * math.pi * 1900 * t) * math.exp(-t / 0.0010);
+      final attack = math.min(1.0, i / 8);
+      final v = attack * (0.6 * knock + 0.55 * body + 0.3 * click);
+      samples[i] = (v.clamp(-1.0, 1.0) * 32767).round();
+    }
     return wav(samples, rate);
   }
 }

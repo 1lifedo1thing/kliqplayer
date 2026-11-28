@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:clock/clock.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart' show Color;
 
@@ -295,8 +296,12 @@ class PlayerController extends ChangeNotifier {
       playing = u.playing!;
     }
     if (u.duration != null) duration = u.duration!;
-    // (Son coupé par la prise débranchée : ce zéro-là n'est pas le réglage.)
-    if (u.volume != null && _mutedFrom == null) volume = u.volume!;
+    // (Son coupé par la prise débranchée : ce zéro-là n'est pas le réglage.
+    // Molette tournée à l'instant : le moteur répond en retard, avec un
+    // volume d'avant, qui ferait revenir le réglage en arrière.)
+    if (u.volume != null && _mutedFrom == null && clock.now().difference(_volumeSetAt) > _volumeHold) {
+      volume = u.volume!;
+    }
     // (Un shuffle en main impose l'aléatoire : celui de la source ne dit
     // alors rien du réglage.)
     if (u.shuffle != null && !forcedShuffle && u.shuffle != shuffle) {
@@ -690,9 +695,15 @@ class PlayerController extends ChangeNotifier {
     await _run((e) => e.seek(target));
   }
 
+  /// Dernier réglage du volume ici, et le temps pendant lequel ce que le
+  /// moteur en dit ne compte pas (voir [_onEngine]).
+  DateTime _volumeSetAt = DateTime(0);
+  static const _volumeHold = Duration(milliseconds: 1500);
+
   Future<void> setVolume(double v) {
     // Tout de suite à l'écran : un moteur distant répond plus tard.
     volume = v.clamp(0, 100);
+    _volumeSetAt = clock.now();
     notifyListeners();
     return _run((e) => e.setVolume(volume));
   }

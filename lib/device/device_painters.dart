@@ -16,12 +16,12 @@ class _LiveJackPainter extends CustomPainter {
 
 /// Le curseur du verrou, qui dépasse à peine de la tranche.
 class HoldPainter extends CustomPainter {
-  const HoldPainter(this.hold, {this.on = false});
+  const HoldPainter(this.hold, {this.on = 0});
 
   final HoldSwitch hold;
 
-  /// Poussé : le curseur se décale et découvre la marque orange.
-  final bool on;
+  /// Poussé (0 → 1, animé) : le curseur glisse et découvre la marque orange.
+  final double on;
 
   static const _orange = Color(0xFFF2861A);
 
@@ -53,12 +53,15 @@ class HoldPainter extends CustomPainter {
             ).createShader(dome),
         );
         canvas.restore();
-        if (on) canvas.drawRect(Rect.fromLTWH(-3, h - 1.4, 3, 1.9), Paint()..color = _orange);
+        if (on >= 0.5) canvas.drawRect(Rect.fromLTWH(-3, h - 1.4, 3, 1.9), Paint()..color = _orange);
       case HoldKind.plastic || HoldKind.metal:
-        final shift = on ? w * 0.3 : 0.0;
-        if (on) canvas.drawRect(Rect.fromLTWH(0.5, h * 0.45, shift, h * 0.55 + 0.5), Paint()..color = _orange);
+        // Curseur de taille fixe qui glisse dans sa fente : la fente sombre se
+        // voit du côté libre, la marque orange se découvre derrière lui.
+        final travel = w * 0.3, shift = travel * on;
+        canvas.drawRect(Rect.fromLTWH(0, h * 0.45, w, h * 0.55 + 0.5), Paint()..color = const Color(0xFF1A1A1C));
+        if (shift > 0) canvas.drawRect(Rect.fromLTWH(0.5, h * 0.45, shift, h * 0.55 + 0.5), Paint()..color = _orange);
         final knob = RRect.fromRectAndCorners(
-          Rect.fromLTWH(shift, 0, w - shift, h + 0.5),
+          Rect.fromLTWH(shift, 0, w - travel, h + 0.5),
           topLeft: const Radius.circular(1.5),
           topRight: const Radius.circular(1.5),
         );
@@ -108,7 +111,7 @@ class _SideClip extends CustomClipper<Rect> {
 /// Poignée du tiroir : une languette d'aluminium microbillé, arrondie du
 /// côté qui dépasse, avec une encoche pour le doigt.
 class _HandlePainter extends CustomPainter {
-  const _HandlePainter(this.side, {this.arrow = false, this.resize = false});
+  const _HandlePainter(this.side, {this.resize = false});
 
   /// Une double flèche en biais gravée (poignée qui redimensionne, aux coins
   /// du bas).
@@ -116,10 +119,6 @@ class _HandlePainter extends CustomPainter {
 
   /// 1 : elle dépasse à droite ; -1 : à gauche.
   final int side;
-
-  /// Une flèche gravée vers l'extérieur au lieu de l'encoche (bouton qui
-  /// déplace le baladeur).
-  final bool arrow;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -197,30 +196,6 @@ class _HandlePainter extends CustomPainter {
         );
       return;
     }
-    if (arrow) {
-      // Chevron gravé : un trait sombre, doublé d'un reflet en dessous.
-      final c = Offset(size.width - 11, size.height / 2);
-      final path = Path()
-        ..moveTo(c.dx - 3, c.dy - 5)
-        ..lineTo(c.dx + 2, c.dy)
-        ..lineTo(c.dx - 3, c.dy + 5);
-      Paint stroke() => Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round;
-      // Même teinte que l'encoche de l'autre poignée.
-      final ink = stroke()
-        ..shader = ui.Gradient.linear(
-          Offset(c.dx - 4, c.dy),
-          Offset(c.dx + 3, c.dy),
-          const [Color(0xFF7C8085), Color(0xFFD2D5D8)],
-        );
-      canvas
-        ..drawPath(path.shift(const Offset(0, 1)), stroke()..color = Colors.white.withValues(alpha: 0.7))
-        ..drawPath(path, ink);
-      return;
-    }
     // Encoche pour le doigt, près du bout.
     final notch = RRect.fromRectAndRadius(
       Rect.fromCenter(center: Offset(size.width - 8, size.height / 2), width: 4, height: size.height * 0.5),
@@ -238,7 +213,7 @@ class _HandlePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _HandlePainter old) => old.side != side || old.arrow != arrow || old.resize != resize;
+  bool shouldRepaint(covariant _HandlePainter old) => old.side != side || old.resize != resize;
 }
 
 /// Voyant d'état d'un shuffle, sur la tranche du haut : éteint, ou vert vif

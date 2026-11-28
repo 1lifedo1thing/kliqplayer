@@ -826,7 +826,7 @@ class DeviceNav extends ChangeNotifier {
             Settings.setString('window.top', windowOnTop.value ? 'on' : 'off');
           },
         ),
-        // Et le poser où l'on veut, plutôt qu'à l'une de ses trois places.
+        // Et le poser où l'on veut, plutôt qu'au milieu.
         MenuEntry(
           tr('Position'),
           value: () => deviceFree.value ? tr('Libre') : tr('Fixe'),

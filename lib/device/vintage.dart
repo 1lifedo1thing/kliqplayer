@@ -706,7 +706,7 @@ class _ThirdGenBodyPainter extends CustomPainter {
       body,
       Paint()
         ..shader = ui.Gradient.linear(const Offset(264, 0), const Offset(531, 0), dark
-            ? const [Color(0xFF2A2B2D), Color(0xFF1F2022), Color(0xFF18191B), Color(0xFF111214), Color(0xFF0D0E0F)]
+            ? const [Color(0xFF1A1B1D), Color(0xFF131416), Color(0xFF0F1012), Color(0xFF0B0C0D), Color(0xFF08090A)]
             : const [Color(0xFFEBEDEA), Color(0xFFE4E6E3), Color(0xFFDADCD9), Color(0xFFCFD1CE), Color(0xFFC9CBC8)],
             const [0, 0.45, 0.72, 0.9, 1]),
     );
@@ -735,7 +735,7 @@ class _ThirdGenBodyPainter extends CustomPainter {
       const Rect.fromLTWH(264, 73, 267, 24),
       Paint()
         ..shader = ui.Gradient.linear(const Offset(0, 73), const Offset(0, 97), [
-          for (final a in const [0.55, 0.27, 0.13, 0.05, 0.0]) const Color(0xFF272D2D).withValues(alpha: a),
+          for (final a in const [0.55, 0.27, 0.13, 0.05, 0.0]) (dark ? Colors.black : const Color(0xFF272D2D)).withValues(alpha: a),
         ], const [0, 0.21, 0.38, 0.55, 1]),
     );
     // Reflet du bord gauche : lueur douce, puis la bande nette.
@@ -743,11 +743,24 @@ class _ThirdGenBodyPainter extends CustomPainter {
       const Rect.fromLTWH(264, 73, 40, 452),
       Paint()
         ..shader = ui.Gradient.linear(const Offset(264, 0), const Offset(304, 0), [
-          for (final a in const [0.0, 0.25, 0.3, 0.12, 0.0]) Colors.white.withValues(alpha: dark ? a * 0.35 : a),
+          for (final a in const [0.0, 0.25, 0.3, 0.12, 0.0]) Colors.white.withValues(alpha: dark ? a * 0.8 : a),
         ], const [0, 0.18, 0.38, 0.7, 1]),
     );
-    // Sur le noir brillant, le reflet est un gris froid, pas une bande blanche.
-    canvas.drawPath(_stripe, Paint()..color = dark ? const Color(0xFF7A7F85).withValues(alpha: 0.45) : const Color(0xFFF9FBF6));
+    // Sur le noir laqué, le reflet est un blanc gris pâle et net (d'après
+    // photo) : c'est le contraste qui fait le brillant.
+    canvas.drawPath(_stripe, Paint()..color = dark ? const Color(0xFFC9CCCF).withValues(alpha: 0.9) : const Color(0xFFF9FBF6));
+    // Laque : un voile de lumière très doux en haut à gauche, comme un reflet
+    // de la pièce dans le vernis.
+    if (dark) {
+      canvas.drawRRect(
+        body,
+        Paint()
+          ..shader = ui.Gradient.linear(const Offset(264, 73), const Offset(480, 330), [
+            Colors.white.withValues(alpha: 0.07),
+            Colors.white.withValues(alpha: 0.0),
+          ]),
+      );
+    }
     canvas.restore();
     canvas.drawRRect(
       body.deflate(0.5),

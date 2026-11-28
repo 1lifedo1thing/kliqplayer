@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:clock/clock.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lecteur/core/engine.dart';
 import 'package:lecteur/core/library.dart';
@@ -182,6 +183,24 @@ void main() {
     expect(p.volume, 70, reason: 'le zéro de la prise débranchée n\'est pas le réglage');
     p.plug();
     expect(engine.log.last, 'mute false 70');
+  });
+
+  test('molette tournée vite : le volume renvoyé en retard par le moteur ne la fait pas revenir', () async {
+    var now = DateTime(2026);
+    final source = _Source(_library([_t('a')]));
+    final p = PlayerController(source);
+    addTearDown(p.dispose);
+    await p.loadLibrary();
+    final engine = source.engines.single;
+    await withClock(Clock(() => now), () async {
+      await p.setVolume(50);
+      await p.setVolume(56);
+      engine.send(const EngineUpdate(volume: 50));
+      expect(p.volume, 56, reason: 'réponse au réglage d\'avant');
+      now = now.add(const Duration(seconds: 2));
+      engine.send(const EngineUpdate(volume: 30));
+      expect(p.volume, 30, reason: 'plus tard : réglé ailleurs (appli Spotify), on suit');
+    });
   });
 
   test('nouvelle bibliothèque : les menus ouverts sur l\'ancienne se referment', () async {
