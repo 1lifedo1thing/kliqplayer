@@ -7,7 +7,7 @@ import 'strings.dart';
 
 /// Version de l'appli, affichée dans Réglages › À propos. La même que dans
 /// pubspec.yaml (un test le vérifie).
-const appVersion = '1.3.7';
+const appVersion = '1.4.0';
 
 /// Page où télécharger la dernière version.
 const releasesUrl = 'https://github.com/Perzivalle/kliqplayer/releases/latest';
@@ -134,9 +134,29 @@ Future<bool> prepareUpdate({void Function()? onStep}) async {
     if (Platform.isWindows) {
       // (Avec BOM : sans lui, Windows PowerShell lit le script en ANSI.)
       File(path('swap.ps1')).writeAsStringSync('\uFEFF$_swapPs1');
-      await Process.start(
-          'powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', path('swap.ps1'), ...args],
-          mode: ProcessStartMode.detached, workingDirectory: target.parent.path, environment: env);
+      // Lanc\u00E9 par WMI : son parent est alors le service WMI, pas nous. Lanc\u00E9
+      // d'ici (m\u00EAme d\u00E9tach\u00E9), Windows peut le fermer en m\u00EAme temps que l'appli,
+      // et rien ne s'installait. On attend de savoir qu'il tourne bien.
+      // (Le message d'\u00E9chec passe en argument : WMI ne transmet pas notre
+      // environnement.)
+      String q(String s) => '"${s.replaceAll('"', "'")}"';
+      final cmd = 'powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File '
+          '${[path('swap.ps1'), ...args, env['KP_FAILED']!].map(q).join(' ')}';
+      final launch = await Process.run('powershell', [
+        '-NoProfile', '-Command', //
+        r'$r = Invoke-CimMethod -ClassName Win32_Process -MethodName Create '
+            r'-Arguments @{ CommandLine = $env:KP_CMD; CurrentDirectory = $env:KP_DIR } -ErrorAction Stop; '
+            r'if ($r.ReturnValue -ne 0) { throw "Win32_Process.Create : $($r.ReturnValue)" }; $r.ProcessId',
+      ], environment: {'KP_CMD': cmd, 'KP_DIR': target.parent.path});
+      if (launch.exitCode != 0) {
+        // WMI indisponible : lanc\u00E9 comme avant, en dernier recours.
+        note('WMI : ${launch.stderr}'.trim());
+        await Process.start(
+            'powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', path('swap.ps1'), ...args, env['KP_FAILED']!],
+            mode: ProcessStartMode.detached, workingDirectory: target.parent.path);
+      } else {
+        note('script : processus ${'${launch.stdout}'.trim()}');
+      }
     } else {
       File(path('swap.sh')).writeAsStringSync(Platform.isMacOS ? _swapSh.replaceFirst('"\$1/kliqplayer"', 'open "\$1"') : _swapSh);
       await Process.start('sh', [path('swap.sh'), ...args],
@@ -185,7 +205,7 @@ rm -rf "$4"
 ''';
 
 const _swapPs1 = r'''
-param($procId, $target, $fresh, $old, $work, $log)
+param($procId, $target, $fresh, $old, $work, $log, $failed)
 # Journal à côté du dossier, ou dans %TEMP% si on ne peut pas y écrire.
 function Note($s) {
   $line = "{0:s}  {1}" -f (Get-Date), $s
@@ -202,17 +222,34 @@ if (Get-Process -Id $procId -ErrorAction SilentlyContinue) {
   Start-Sleep -Milliseconds 500
 }
 Note 'appli fermée'
-# Windows garde les fichiers verrouillés un instant après la fermeture.
+# Le dossier installé reste en place : on copie la nouvelle version par-dessus.
+# kliqplayer.exe garde ainsi son chemin (et reste le même fichier), et les
+# raccourcis vers lui restent bons ; renommer le dossier les faisait suivre
+# l'ancien. L'ancien contenu est d'abord sauvegardé, pour le remettre si ça rate.
+function CopyOver($from, $to) {
+  Get-ChildItem -LiteralPath $from -Force | Copy-Item -Destination $to -Recurse -Force -ErrorAction Stop
+}
 $moved = $false
-for ($i = 0; $i -lt 50; $i++) {
-  try { Move-Item -LiteralPath $target -Destination $old -ErrorAction Stop; $moved = $true; break }
-  catch { $problem = $_; Start-Sleep -Milliseconds 200 }
-}
-if ($moved) {
-  try { Move-Item -LiteralPath $fresh -Destination $target -ErrorAction Stop; Note 'installée' }
-  catch { $problem = $_; Move-Item -LiteralPath $old -Destination $target; $moved = $false }
-}
-if (-not $moved) { Note "échec de l'échange : $problem" }
+try {
+  New-Item -ItemType Directory -Path $old -Force -ErrorAction Stop | Out-Null
+  CopyOver $target $old
+  # Windows garde les fichiers verrouillés un instant après la fermeture.
+  for ($i = 0; $i -lt 50; $i++) {
+    try { CopyOver $fresh $target; $moved = $true; break }
+    catch { $problem = $_; Start-Sleep -Milliseconds 200 }
+  }
+  if ($moved) {
+    # Ce que la nouvelle version n'a plus.
+    $keep = @(Get-ChildItem -LiteralPath $fresh -Force -Recurse | ForEach-Object { $_.FullName.Substring($fresh.Length) })
+    Get-ChildItem -LiteralPath $target -Force -Recurse | Sort-Object { $_.FullName.Length } -Descending |
+      Where-Object { $keep -notcontains $_.FullName.Substring($target.Length) } |
+      Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+    Note 'installée'
+  } else {
+    CopyOver $old $target
+  }
+} catch { $problem = $_; $moved = $false }
+if (-not $moved) { Note "échec de l'installation, ancienne version gardée : $problem" }
 # Relancée par l'Explorateur, comme d'un double-clic : lancée d'ici, elle
 # hériterait de la fenêtre cachée de ce script et ne s'afficherait pas.
 try {
@@ -221,7 +258,7 @@ try {
 } catch { $problem = $_; $moved = $false; Note "relance impossible : $problem" }
 if (-not $moved) {
   Add-Type -AssemblyName System.Windows.Forms
-  [System.Windows.Forms.MessageBox]::Show("$env:KP_FAILED`n`n$problem`n`n$log", 'KliqPlayer') | Out-Null
+  [System.Windows.Forms.MessageBox]::Show("$failed`n`n$problem`n`n$log", 'KliqPlayer') | Out-Null
 }
 Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
 ''';
