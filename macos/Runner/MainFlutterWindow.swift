@@ -20,4 +20,10 @@ class MainFlutterWindow: NSWindow {
 
     super.awakeFromNib()
   }
+
+  // macOS ramène d'office une fenêtre dans l'écran (sous la barre des menus) :
+  // on veut pouvoir laisser l'iPod à moitié sorti du bord.
+  override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {
+    return frameRect
+  }
 }

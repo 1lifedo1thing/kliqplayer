@@ -174,7 +174,8 @@ void main() {
       await settle(tester);
       expect(tester.getRect(find.byType(DeviceBody)).center, held.center, reason: 'tiroir rentré : de retour où on l\'a lâché');
 
-      // Lâché à moitié hors de la fenêtre : ramené en entier dedans.
+      // Lancé loin hors de la fenêtre : il y reste à moitié sorti, mais
+      // garde au moins un quart de lui dedans.
       final out = await tester.startGesture(held.center - const Offset(60, 0));
       await out.moveBy(const Offset(30, 10));
       await out.moveBy(const Offset(4000, 0));
@@ -182,8 +183,8 @@ void main() {
       await out.up();
       await settle(tester);
       final kept = tester.getRect(find.byType(DeviceBody));
-      expect(kept.right, lessThanOrEqualTo(window.width));
-      expect(kept.center.dx, greaterThan(held.center.dx));
+      expect(kept.right, greaterThan(window.width), reason: 'il peut dépasser du bord');
+      expect(kept.left, lessThanOrEqualTo(window.width - kept.width / 4 + 0.5), reason: 'un quart reste visible');
 
       // Là, contre le bord droit, le tiroir n'a pas la place : le baladeur s'écarte juste assez, puis y retourne.
       await tester.sendKeyEvent(LogicalKeyboardKey.keyT);

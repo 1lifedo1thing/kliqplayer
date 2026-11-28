@@ -51,6 +51,16 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
+  // Un clic que Windows juge hors d'une zone cliquable (HTERROR) le fait
+  // biper à chaque fois ; la fenêtre, transparente et découpée autour de
+  // l'iPod, en reçoit à chaque clic. On le tait : le clic suit son cours.
+  if (message == WM_SETCURSOR && LOWORD(lparam) == static_cast<WORD>(HTERROR)) {
+    const UINT mouse = HIWORD(lparam);
+    if (mouse == WM_LBUTTONDOWN || mouse == WM_RBUTTONDOWN || mouse == WM_MBUTTONDOWN) {
+      return TRUE;
+    }
+  }
+
   // Give Flutter, including plugins, an opportunity to handle window messages.
   if (flutter_controller_) {
     std::optional<LRESULT> result =

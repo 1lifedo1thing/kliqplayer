@@ -279,11 +279,13 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
     if (mounted) setState(_kick);
   }
 
-  /// [at] ramené là où l'appareil ([dev], à sa place) reste entier dans la
-  /// fenêtre ([w] × [h]).
+  /// [at] ramené là où l'appareil ([dev], à sa place) garde au moins un
+  /// quart de lui dans la fenêtre ([w] × [h]) : on peut le laisser à moitié
+  /// sorti de l'écran, pas l'y perdre.
   static Offset _keepInside(Offset at, Rect dev, double w, double h) {
+    final kx = dev.width / 4, ky = dev.height / 4;
     double fit(double v, double lo, double hi) => lo > hi ? 0 : v.clamp(lo, hi);
-    return Offset(fit(at.dx, 8 - dev.left, w - 8 - dev.right), fit(at.dy, 8 - dev.top, h - 8 - dev.bottom));
+    return Offset(fit(at.dx, kx - dev.right, w - kx - dev.left), fit(at.dy, ky - dev.bottom, h - ky - dev.top));
   }
 
   /// Tenu : où doit être son centre (à l'écran), l'écart entre ce centre et
