@@ -37,7 +37,7 @@ void main() {
       }
       final model = Nano5Model(nano5Colors.firstWhere((c) => c.name == tint));
       await showStage(tester, playing(title, artist, album, length, cover.readAsBytesSync()), model);
-      await key(tester, LogicalKeyboardKey.arrowDown, 3); // Menu › Now Playing
+      await key(tester, LogicalKeyboardKey.arrowDown, 4); // Menu › Now Playing (après « Shuffle Songs (Color) »)
       await key(tester, LogicalKeyboardKey.enter);
       await decode(tester);
       await capture(tester, 'site/img/nano5/$name.png');
