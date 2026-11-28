@@ -1019,6 +1019,7 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
       fromBelow: !_model.jackOnTop,
       shiftY: _backY.value,
       glow: Curves.easeInOut.transform(_glow),
+      fade: _dragsInside ? 0 : stage.size.height * 0.12,
     );
   }
 

@@ -38,6 +38,7 @@ class JackPainter extends CustomPainter {
     this.fromBelow = false,
     this.shiftY = 0,
     this.glow = 1,
+    this.fade = 0,
   });
 
   /// Entrée de la prise sur la tranche de l'appareil, ou null (rien à dessiner).
@@ -66,6 +67,10 @@ class JackPainter extends CustomPainter {
   /// (H J K L pilotent le baladeur) ; éteint, il faut d'abord cliquer sur le baladeur.
   /// Les valeurs entre les deux font le fondu.
   final double glow;
+
+  /// Sur cette distance (pixels) avant le bord de la fenêtre, le câble s'efface
+  /// en fondu : dans sa propre fenêtre, il ne peut pas aller jusqu'au bord de l'écran.
+  final double fade;
 
   // Nickel : un peu plus chaud et plus doux que le chrome.
   static const _nickel = [
@@ -102,7 +107,20 @@ class JackPainter extends CustomPainter {
         ..scale(1, -1);
     }
     final exitY = fromBelow ? 2 * socket.dy - (size.height + 40 - shiftY) : -40.0 - shiftY;
-    _paintUpward(canvas, size, socket, exitY);
+    if (fade > 0) {
+      final edge = exitY + 40; // le bord de la fenêtre
+      canvas.saveLayer(null, Paint());
+      _paintUpward(canvas, size, socket, exitY);
+      canvas.drawRect(
+        Rect.fromLTRB(-1e5, edge - 1e4, 1e5, edge + fade),
+        Paint()
+          ..blendMode = BlendMode.dstIn
+          ..shader = ui.Gradient.linear(Offset(0, edge), Offset(0, edge + fade), const [Color(0x00000000), Color(0xFF000000)]),
+      );
+      canvas.restore();
+    } else {
+      _paintUpward(canvas, size, socket, exitY);
+    }
     canvas.restore();
   }
 
