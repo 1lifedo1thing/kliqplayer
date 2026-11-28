@@ -697,10 +697,14 @@ class DeviceNav extends ChangeNotifier {
 
   Future<void> _update() async {
     if (updateStatus != null) return; // déjà en train de télécharger
-    if (!await prepareUpdate()) {
+    if (!await prepareUpdate(onStep: notifyListeners)) {
+      notifyListeners();
       launchUrl(Uri.parse(releasesUrl));
       return;
     }
+    // « Redémarrage… » reste un instant à l'écran avant que l'appli se ferme.
+    notifyListeners();
+    await Future<void>.delayed(const Duration(milliseconds: 700));
     // Comme en quittant par Échap : le script attend qu'on soit fermé.
     for (final a in player.accounts) {
       a.shutdown();

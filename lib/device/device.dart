@@ -181,11 +181,98 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
   double _wheelRadius = 0;
 
   void _trackWheel(Offset pointer) {
+    // Près d'un coin du bas : sa poignée de redimensionnement apparaît.
+    final dev = _devLocal;
+    var grip = 0;
+    if (dev != null && _canResize) {
+      final reach = 70 * _tabScale(dev);
+      if ((pointer - dev.bottomLeft).distance < reach) grip = -1;
+      if ((pointer - dev.bottomRight).distance < reach) grip = 1;
+    }
     // Un peu de marge autour : on vise souvent le bord de la molette.
     final over = (pointer - _wheelAt).distance <= _wheelRadius + 8;
-    if (over == _overWheel) return;
-    setState(() => _overWheel = over);
+    if (over == _overWheel && grip == _nearGrip) return;
+    setState(() {
+      _overWheel = over;
+      _nearGrip = grip;
+    });
     _kick();
+  }
+
+  // --- Taille choisie à la main (position libre, Windows) --------------------
+
+  static const _sizeKey = 'device.size';
+
+  /// Taille de l'appareil choisie avec les poignées des coins du bas (1 : celle
+  /// que la scène lui donne).
+  late double _userScale = (_remember ? double.tryParse(Settings.getString(_sizeKey) ?? '') : null)?.clamp(0.5, 1.8) ?? 1;
+
+  /// On ne le redimensionne qu'en position libre, quand il se déplace dans la
+  /// fenêtre (Windows) : ailleurs, c'est la fenêtre qui lui donne sa taille.
+  bool get _canResize => deviceFree.value && _dragsInside;
+  double get _sizeScale => _canResize ? _userScale : 1;
+
+  /// L'appareil dans la scène (avant le décalage de sa position libre).
+  Rect? _devLocal;
+
+  /// Coin du bas dont la poignée est visible : -1 gauche, 1 droite, 0 aucun.
+  int _nearGrip = 0;
+  int _resizing = 0;
+  double _resizeFrom = 1, _resizeDist = 1;
+  Offset _resizeCenter = Offset.zero;
+
+  void _resizeStart(int side, DragStartDetails d) {
+    final dev = _devLocal, box = _stageKey.currentContext?.findRenderObject();
+    if (dev == null || box is! RenderBox) return;
+    _resizeCenter = box.localToGlobal(dev.center);
+    _resizeDist = math.max(20, (d.globalPosition - _resizeCenter).distance);
+    _resizeFrom = _userScale;
+    setState(() => _resizing = side);
+  }
+
+  void _resizeUpdate(DragUpdateDetails d) {
+    if (_resizing == 0) return;
+    final next = (_resizeFrom * (d.globalPosition - _resizeCenter).distance / _resizeDist).clamp(0.5, 1.8);
+    setState(() => _userScale = next);
+    _kick();
+  }
+
+  void _resizeEnd() {
+    if (_resizing == 0) return;
+    setState(() => _resizing = 0);
+    if (_remember) Settings.setString(_sizeKey, _userScale.toStringAsFixed(3));
+    _kick();
+  }
+
+  /// Poignée de redimensionnement au coin du bas [side] de l'appareil [dev].
+  Widget _resizeGrip(int side, Rect dev, double openC) {
+    final k = _tabScale(dev), size = 30 * k;
+    final shown = _canResize && openC < 0.05 && _phase == _Swap.none && (_nearGrip == side || _resizing == side);
+    final at = side < 0 ? dev.bottomLeft : dev.bottomRight;
+    return Positioned(
+      left: at.dx - size / 2 + side * 6 * k,
+      top: at.dy - size / 2 + 6 * k,
+      width: size,
+      height: size,
+      child: IgnorePointer(
+        ignoring: !shown,
+        child: AnimatedOpacity(
+          opacity: shown ? 1 : 0,
+          duration: const Duration(milliseconds: 150),
+          child: MouseRegion(
+            cursor: side < 0 ? SystemMouseCursors.resizeUpRightDownLeft : SystemMouseCursors.resizeUpLeftDownRight,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onPanStart: (d) => _resizeStart(side, d),
+              onPanUpdate: _resizeUpdate,
+              onPanEnd: (_) => _resizeEnd(),
+              onPanCancel: _resizeEnd,
+              child: CustomPaint(painter: _GripPainter(side)),
+            ),
+          ),
+        ),
+      ),
+    );
   }
   bool _wantOpen = false;
 
@@ -1418,6 +1505,10 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
           device = SnapshotWidget(controller: _deviceSnap, mode: SnapshotMode.permissive, child: device);
           // L'appareil s'écarte et rétrécit pour laisser la place au tiroir :
           // ensemble, ils restent centrés dans la fenêtre.
+          // La taille choisie avec les poignées des coins du bas, autour de
+          // son centre.
+          final u = _sizeScale;
+          if (u != 1) device = Transform.scale(scale: u, origin: g.device.center - Offset(w / 2, h / 2), child: device);
           final scale = 1 + (g.room - 1) * openC;
           // Sa place à gauche ou à droite : tiroir ouvert, il revient au
           // milieu avec lui.
@@ -1432,8 +1523,9 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
           }
           // Où est l'appareil à l'écran en ce moment.
           final c = Offset(w / 2, h / 2);
-          Offset place(Offset p) => c + (p - c) * scale + Offset(shift, 0);
+          Offset place(Offset p) => c + (g.device.center + (p - g.device.center) * u - c) * scale + Offset(shift, 0);
           final dev = Rect.fromPoints(place(g.device.topLeft), place(g.device.bottomRight));
+          _devLocal = dev;
           final k = dev.width / _model.size.width;
           _wheelAt = dev.topLeft + _model.wheelCenter * k;
           _wheelRadius = _model.wheel.radius * k;
@@ -1579,6 +1671,8 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
                 ),
                 deviceLayer,
                 for (final side in const [-1, 1]) ..._hoverInside(side, dev, g.cornerRadius * scale, openC),
+                // Les poignées de redimensionnement, sur les coins du bas.
+                for (final side in const [-1, 1]) _resizeGrip(side, dev, openC),
                 // Le câble et la prise, par-dessus tout.
                 Positioned.fill(
                   child: IgnorePointer(

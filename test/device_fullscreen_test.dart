@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -259,6 +260,60 @@ void main() {
       // 680 de haut dessiné ; dans sa fenêtre de 740 (148 pour le câble, 40
       // de marge), il en fait 552. Pareil ici, malgré toute la place.
       expect(tester.getRect(find.byType(DeviceBody)).height, closeTo(552, 0.5));
+    });
+
+    testWidgets('position libre : les poignées des coins du bas agrandissent et rapetissent le baladeur', (tester) async {
+      tester.view
+        ..physicalSize = window
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      DeviceStage.debugDragInside = true;
+      deviceFree.value = true;
+      addTearDown(() {
+        DeviceStage.debugDragInside = false;
+        deviceFree.value = false;
+      });
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Material(
+            type: MaterialType.transparency,
+            child: DeviceStage(player: PlayerController.preview(), initial: const ClassicModel()),
+          ),
+        ),
+      );
+      await settle(tester);
+      final home = tester.getRect(find.byType(DeviceBody));
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      addTearDown(mouse.removePointer);
+      await mouse.addPointer(location: Offset.zero);
+
+      // Le pointeur approche du coin du bas à droite : sa poignée sort ; on la tire en biais.
+      final grip = home.bottomRight + const Offset(6, 6);
+      await mouse.moveTo(grip - const Offset(20, 20));
+      await settle(tester);
+      await mouse.moveTo(grip);
+      await tester.pump(const Duration(milliseconds: 200));
+      await mouse.down(grip);
+      await mouse.moveBy(const Offset(-30, -30));
+      await mouse.moveBy(const Offset(-60, -60));
+      await mouse.up();
+      await settle(tester);
+      final smaller = tester.getRect(find.byType(DeviceBody));
+      expect(smaller.height, lessThan(home.height * 0.9), reason: 'tirée vers l\'intérieur : plus petit');
+      expect(smaller.center.dx, closeTo(home.center.dx, 1), reason: 'autour de son centre');
+
+      // Le coin du bas à gauche, tiré vers l'extérieur : il regrandit.
+      final left = smaller.bottomLeft + const Offset(-6, 6);
+      await mouse.moveTo(left + const Offset(20, -20));
+      await settle(tester);
+      await mouse.moveTo(left);
+      await tester.pump(const Duration(milliseconds: 200));
+      await mouse.down(left);
+      await mouse.moveBy(const Offset(-20, 20));
+      await mouse.moveBy(const Offset(-40, 40));
+      await mouse.up();
+      await settle(tester);
+      expect(tester.getRect(find.byType(DeviceBody)).height, greaterThan(smaller.height * 1.1));
     });
   });
 }

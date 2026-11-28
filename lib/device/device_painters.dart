@@ -232,3 +232,72 @@ class _LedPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _LedPainter old) => old.on != on;
 }
+
+/// Poignée de redimensionnement d'un coin du bas : un bouton rond du même
+/// métal que les poignées du tiroir, gravé d'une double flèche en biais.
+class _GripPainter extends CustomPainter {
+  const _GripPainter(this.side);
+
+  /// -1 : coin du bas à gauche ; 1 : à droite.
+  final int side;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = size.center(Offset.zero), r = size.shortestSide / 2 - 1;
+    canvas.drawCircle(
+      c.translate(0, 2),
+      r,
+      Paint()
+        ..color = Colors.black.withValues(alpha: 0.35)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+    );
+    canvas.drawCircle(
+      c,
+      r,
+      Paint()
+        ..shader = ui.Gradient.linear(
+          c.translate(0, -r),
+          c.translate(0, r),
+          const [Color(0xFFE2E5E8), Color(0xFFC6CACE), Color(0xFFA9AEB3)],
+          const [0, 0.5, 1],
+        ),
+    );
+    canvas.drawCircle(
+      c,
+      r - 0.6,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2
+        ..shader = ui.Gradient.linear(
+          c.translate(0, -r),
+          c.translate(0, r),
+          [Colors.white.withValues(alpha: 0.9), Colors.black.withValues(alpha: 0.2)],
+        ),
+    );
+    // Double flèche le long de la diagonale du coin.
+    final a = r * 0.45, head = r * 0.28;
+    final dir = Offset(side.toDouble(), 1) / 1.4142;
+    final from = c - dir * a, to = c + dir * a;
+    final across = Offset(-dir.dy, dir.dx);
+    final arrow = Path()
+      ..moveTo(from.dx, from.dy)
+      ..lineTo(to.dx, to.dy)
+      ..moveTo((to - dir * head + across * head).dx, (to - dir * head + across * head).dy)
+      ..lineTo(to.dx, to.dy)
+      ..lineTo((to - dir * head - across * head).dx, (to - dir * head - across * head).dy)
+      ..moveTo((from + dir * head + across * head).dx, (from + dir * head + across * head).dy)
+      ..lineTo(from.dx, from.dy)
+      ..lineTo((from + dir * head - across * head).dx, (from + dir * head - across * head).dy);
+    Paint stroke(Color color) => Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..color = color;
+    canvas.drawPath(arrow.shift(const Offset(0, 1)), stroke(Colors.white.withValues(alpha: 0.7)));
+    canvas.drawPath(arrow, stroke(const Color(0xFF7C8085)));
+  }
+
+  @override
+  bool shouldRepaint(covariant _GripPainter old) => old.side != side;
+}
