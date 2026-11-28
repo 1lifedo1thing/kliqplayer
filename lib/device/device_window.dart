@@ -165,6 +165,9 @@ mixin _ManagedWindow on State<DeviceStage> {
   /// L'appareil revient au milieu de la fenêtre.
   void _recenter();
 
+  /// Taille choisie avec les poignées des coins du bas.
+  double get _userScale;
+
   // --- Fenêtre réglée par l'appli (Windows, macOS) ---------------------------
   //
   // Sous Windows et macOS, l'appli place et taille elle-même sa fenêtre
@@ -267,7 +270,9 @@ mixin _ManagedWindow on State<DeviceStage> {
     if (g == null) return;
     final origin = _windowRect().topLeft;
     // À sa vraie taille : la fenêtre va se faire à sa mesure.
-    _anchor = Rect.fromCenter(center: g.device.center + origin, width: _model.size.width, height: _model.size.height);
+    // (À la taille choisie avec les poignées des coins du bas.)
+    _anchor = Rect.fromCenter(
+        center: g.device.center + origin, width: _model.size.width * _userScale, height: _model.size.height * _userScale);
     win.addListener((e) {
       if (e is WindowMovedEvent && _dragFrom != null && mounted) {
         // L'appareil suit la fenêtre qu'on déplace.
@@ -579,7 +584,9 @@ mixin _ManagedWindow on State<DeviceStage> {
   /// Découpe la fenêtre ([w] × [h]) : entière si [whole], sinon autour de
   /// l'appareil (en [dev] à l'écran, avec ses poignées et son ombre) et de
   /// son câble, jusqu'au bord.
-  void _shapeWindow(double w, double h, Rect dev, {required bool whole, bool moving = false}) {
+  /// [growing] : on le redimensionne ; la découpe prend de l'avance tout
+  /// autour, l'image suivante (plus grande) ne doit pas être rognée.
+  void _shapeWindow(double w, double h, Rect dev, {required bool whole, bool moving = false, bool growing = false}) {
     final win = _full;
     if (win == null) return;
     final size = Size(w, h);
@@ -607,6 +614,7 @@ mixin _ManagedWindow on State<DeviceStage> {
     // ses dernières positions (l'image encore à l'écran n'est pas rognée)
     // et celle où il sera à l'image suivante.
     final spots = <Rect>[dev];
+    if (growing) spots.add(Rect.fromCenter(center: dev.center, width: dev.width * 1.4, height: dev.height * 1.4));
     if (moving) {
       if (_trail.isNotEmpty) spots.add(dev.shift((dev.topLeft - _trail.last.topLeft) * 2));
       spots.addAll(_trail);

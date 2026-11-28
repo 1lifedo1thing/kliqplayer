@@ -185,9 +185,11 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
     final dev = _devLocal;
     var grip = 0;
     if (dev != null && _canResize) {
-      final reach = 70 * _tabScale(dev);
-      if ((pointer - dev.bottomLeft).distance < reach) grip = -1;
-      if ((pointer - dev.bottomRight).distance < reach) grip = 1;
+      // Autour de la languette, au flanc, juste au-dessus de l'arrondi du coin.
+      final k = _tabScale(dev), corner = _model.cornerRadius * dev.width / _model.size.width;
+      final y = dev.bottom - corner - 25 * k, reach = 60 * k;
+      if ((pointer - Offset(dev.left, y)).distance < reach) grip = -1;
+      if ((pointer - Offset(dev.right, y)).distance < reach) grip = 1;
     }
     // Un peu de marge autour : on vise souvent le bord de la molette.
     final over = (pointer - _wheelAt).distance <= _wheelRadius + 8;
@@ -205,12 +207,21 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
 
   /// Taille de l'appareil choisie avec les poignées des coins du bas (1 : celle
   /// que la scène lui donne).
+  @override
   late double _userScale = (_remember ? double.tryParse(Settings.getString(_sizeKey) ?? '') : null)?.clamp(0.5, 1.8) ?? 1;
 
-  /// On ne le redimensionne qu'en position libre, quand il se déplace dans la
-  /// fenêtre (Windows) : ailleurs, c'est la fenêtre qui lui donne sa taille.
-  bool get _canResize => deviceFree.value && _dragsInside;
-  double get _sizeScale => _canResize ? _userScale : 1;
+  /// Redimensionnable : en position libre sous Windows (il se déplace dans la
+  /// fenêtre, on change sa taille), sous macOS (la fenêtre, réglée par
+  /// l'appli autour de lui, suit), et sous Linux (on change la taille de la
+  /// fenêtre, qu'il remplit ; sans effet si le gestionnaire la range en
+  /// mosaïque). Pas dans les tests, sauf [debugDragInside].
+  bool get _canResize =>
+      (deviceFree.value && _dragsInside) || _win != null || (_remember && Platform.isLinux && !_dragsInside);
+
+  /// Agrandi ou rapetissé dans la scène : seulement quand il s'y déplace
+  /// (Windows) ; ailleurs, c'est la fenêtre qui change de taille.
+  double get _sizeScale => deviceFree.value && _dragsInside ? _userScale : 1;
+
 
   /// L'appareil dans la scène (avant le décalage de sa position libre).
   Rect? _devLocal;
@@ -228,12 +239,28 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
     _resizeDist = math.max(20, (d.globalPosition - _resizeCenter).distance);
     _resizeFrom = _userScale;
     setState(() => _resizing = side);
+    if (Platform.isLinux && !_dragsInside && _remember) {
+      // Linux : sous Wayland, une appli ne peut pas se retailler elle-même ;
+      // le compositeur s'en charge, depuis ce coin, jusqu'au relâchement.
+      try {
+        WindowManager.instance.getCurrent()?.startResizing(side < 0 ? ResizeEdge.bottomLeft : ResizeEdge.bottomRight);
+      } catch (_) {}
+      _resizing = 0;
+    }
   }
 
   void _resizeUpdate(DragUpdateDetails d) {
     if (_resizing == 0) return;
-    final next = (_resizeFrom * (d.globalPosition - _resizeCenter).distance / _resizeDist).clamp(0.5, 1.8);
+    final ratio = (d.globalPosition - _resizeCenter).distance / _resizeDist;
+    final next = (_resizeFrom * ratio).clamp(0.5, 1.8);
     setState(() => _userScale = next);
+    final anchor = _anchor;
+    if (_win != null && anchor != null) {
+      // macOS : il change de taille à l'écran, la fenêtre se refait autour.
+      _anchor = Rect.fromCenter(center: anchor.center, width: _model.size.width * next, height: _model.size.height * next);
+      _frame = null;
+      _applyFrame();
+    }
     _kick();
   }
 
@@ -244,32 +271,52 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
     _kick();
   }
 
-  /// Poignée de redimensionnement au coin du bas [side] de l'appareil [dev].
-  Widget _resizeGrip(int side, Rect dev, double openC) {
-    final k = _tabScale(dev), size = 30 * k;
+  /// Poignée de redimensionnement, cachée derrière le coin du bas [side] de
+  /// l'appareil [dev] : même languette de métal que celles du tiroir, elle
+  /// glisse dehors quand la souris approche de ce coin.
+  Widget _resizeGrip(int side, Rect dev, double corner, double openC) {
+    final k = _tabScale(dev);
+    final width = 40.0 * k, height = 30.0 * k, reach = 22.0 * k;
     final shown = _canResize && openC < 0.05 && _phase == _Swap.none && (_nearGrip == side || _resizing == side);
-    final at = side < 0 ? dev.bottomLeft : dev.bottomRight;
+    final hidden = side > 0 ? 0.0 : reach, out = side > 0 ? reach : 0.0;
     return Positioned(
-      left: at.dx - size / 2 + side * 6 * k,
-      top: at.dy - size / 2 + 6 * k,
-      width: size,
-      height: size,
+      left: side > 0 ? dev.right - width : dev.left - reach,
+      top: dev.bottom - corner - 10 * k - height,
+      width: width + reach,
+      height: height,
       child: IgnorePointer(
         ignoring: !shown,
-        child: AnimatedOpacity(
-          opacity: shown ? 1 : 0,
-          duration: const Duration(milliseconds: 150),
-          child: MouseRegion(
-            cursor: side < 0 ? SystemMouseCursors.resizeUpRightDownLeft : SystemMouseCursors.resizeUpLeftDownRight,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onPanStart: (d) => _resizeStart(side, d),
-              onPanUpdate: _resizeUpdate,
-              onPanEnd: (_) => _resizeEnd(),
-              onPanCancel: _resizeEnd,
-              child: CustomPaint(painter: _GripPainter(side)),
+        child: Stack(
+          children: [
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOut,
+              left: shown ? out : hidden,
+              top: 0,
+              width: width,
+              height: height,
+              // (Pas opaque : la scène doit continuer à suivre la souris, sinon
+              // elle croit qu'on est parti et la languette rentre.)
+              child: MouseRegion(
+                opaque: false,
+                cursor: side < 0 ? SystemMouseCursors.resizeUpRightDownLeft : SystemMouseCursors.resizeUpLeftDownRight,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  dragStartBehavior: DragStartBehavior.down,
+                  onPanStart: (d) => _resizeStart(side, d),
+                  onPanUpdate: _resizeUpdate,
+                  onPanEnd: (_) => _resizeEnd(),
+                  onPanCancel: _resizeEnd,
+                  // Rentrée, même son ombre disparaît.
+                  child: AnimatedOpacity(
+                    opacity: shown ? 1 : 0,
+                    duration: const Duration(milliseconds: 180),
+                    child: CustomPaint(painter: _HandlePainter(side, resize: true)),
+                  ),
+                ),
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -1086,7 +1133,10 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
   void _choose(DeviceModel m) {
     // Le nouveau prend la place de l'ancien à l'écran, centré au même endroit.
     final anchor = _anchor;
-    if (anchor != null) _anchor = Rect.fromCenter(center: anchor.center, width: m.size.width, height: m.size.height);
+    if (anchor != null) {
+      final k = _win != null ? _userScale : 1.0;
+      _anchor = Rect.fromCenter(center: anchor.center, width: m.size.width * k, height: m.size.height * k);
+    }
     _nav.fitLook(m.look);
     _nav.coverPalette = m.coverPalette;
     _nav.coverColor = m.coverColor;
@@ -1604,7 +1654,8 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
             h,
             // (Tenu ou en train de revenir : là où on le voit.)
             dev.shift(back),
-            moving: _backHeld || !_backX.isSettled || !_backY.isSettled,
+            moving: _backHeld || !_backX.isSettled || !_backY.isSettled || _resizing != 0,
+            growing: _resizing != 0,
             whole: _wantOpen ||
                 open != 0 ||
                 _dragging ||
@@ -1627,7 +1678,8 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
               opaque: false,
               hitTestBehavior: HitTestBehavior.translucent,
               onHover: (e) => _trackWheel(e.localPosition),
-              onExit: (_) => _trackWheel(const Offset(double.infinity, 0)),
+              // (Sa vraie position : sur une poignée, la scène croit qu'on la quitte.)
+              onExit: (e) => _trackWheel(e.localPosition),
               child: Stack(
               key: _stageKey,
               children: [
@@ -1642,9 +1694,11 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
                   ),
                 ),
                 // Les deux poignées, derrière les coins du haut.
-                for (final side in const [-1, 1]) _handle(side, dev, g.cornerRadius * scale, openC),
+                for (final side in const [-1, 1]) _handle(side, dev, g.cornerRadius * scale * u, openC),
                 // Et sous chacune, le bouton qui décale le baladeur de ce côté.
-                for (final side in const [-1, 1]) _moveHandle(side, dev, g.cornerRadius * scale, openC),
+                for (final side in const [-1, 1]) _moveHandle(side, dev, g.cornerRadius * scale * u, openC),
+                // Derrière les coins du bas, celles qui le redimensionnent.
+                for (final side in const [-1, 1]) _resizeGrip(side, dev, g.cornerRadius * scale * u, openC),
                 // Le tiroir, derrière l'appareil, d'où il émerge. Coupé au
                 // flanc opposé : au début de l'ouverture, son autre bout ne
                 // dépasse pas de l'autre côté.
@@ -1670,9 +1724,7 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
                   ),
                 ),
                 deviceLayer,
-                for (final side in const [-1, 1]) ..._hoverInside(side, dev, g.cornerRadius * scale, openC),
-                // Les poignées de redimensionnement, sur les coins du bas.
-                for (final side in const [-1, 1]) _resizeGrip(side, dev, openC),
+                for (final side in const [-1, 1]) ..._hoverInside(side, dev, g.cornerRadius * scale * u, openC),
                 // Le câble et la prise, par-dessus tout.
                 Positioned.fill(
                   child: IgnorePointer(

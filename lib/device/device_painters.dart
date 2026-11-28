@@ -108,7 +108,11 @@ class _SideClip extends CustomClipper<Rect> {
 /// Poignée du tiroir : une languette d'aluminium microbillé, arrondie du
 /// côté qui dépasse, avec une encoche pour le doigt.
 class _HandlePainter extends CustomPainter {
-  const _HandlePainter(this.side, {this.arrow = false});
+  const _HandlePainter(this.side, {this.arrow = false, this.resize = false});
+
+  /// Une double flèche en biais gravée (poignée qui redimensionne, aux coins
+  /// du bas).
+  final bool resize;
 
   /// 1 : elle dépasse à droite ; -1 : à gauche.
   final int side;
@@ -163,6 +167,36 @@ class _HandlePainter extends CustomPainter {
           [Colors.white.withValues(alpha: 0.9), Colors.black.withValues(alpha: 0.2)],
         ),
     );
+    if (resize) {
+      // Double flèche en biais, vers le coin : même gravure que le chevron.
+      final c = Offset(size.width - 12, size.height / 2), a = 5.0, h = 3.2;
+      final path = Path()
+        ..moveTo(c.dx - a, c.dy - a)
+        ..lineTo(c.dx + a, c.dy + a)
+        ..moveTo(c.dx - a, c.dy - a + h)
+        ..lineTo(c.dx - a, c.dy - a)
+        ..lineTo(c.dx - a + h, c.dy - a)
+        ..moveTo(c.dx + a - h, c.dy + a)
+        ..lineTo(c.dx + a, c.dy + a)
+        ..lineTo(c.dx + a, c.dy + a - h);
+      Paint stroke() => Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.8
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round;
+      canvas
+        ..drawPath(path.shift(const Offset(0, 1)), stroke()..color = Colors.white.withValues(alpha: 0.7))
+        ..drawPath(
+          path,
+          stroke()
+            ..shader = ui.Gradient.linear(
+              Offset(c.dx - a, c.dy),
+              Offset(c.dx + a, c.dy),
+              const [Color(0xFF7C8085), Color(0xFFD2D5D8)],
+            ),
+        );
+      return;
+    }
     if (arrow) {
       // Chevron gravé : un trait sombre, doublé d'un reflet en dessous.
       final c = Offset(size.width - 11, size.height / 2);
@@ -204,7 +238,7 @@ class _HandlePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _HandlePainter old) => old.side != side || old.arrow != arrow;
+  bool shouldRepaint(covariant _HandlePainter old) => old.side != side || old.arrow != arrow || old.resize != resize;
 }
 
 /// Voyant d'état d'un shuffle, sur la tranche du haut : éteint, ou vert vif
@@ -231,73 +265,4 @@ class _LedPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _LedPainter old) => old.on != on;
-}
-
-/// Poignée de redimensionnement d'un coin du bas : un bouton rond du même
-/// métal que les poignées du tiroir, gravé d'une double flèche en biais.
-class _GripPainter extends CustomPainter {
-  const _GripPainter(this.side);
-
-  /// -1 : coin du bas à gauche ; 1 : à droite.
-  final int side;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final c = size.center(Offset.zero), r = size.shortestSide / 2 - 1;
-    canvas.drawCircle(
-      c.translate(0, 2),
-      r,
-      Paint()
-        ..color = Colors.black.withValues(alpha: 0.35)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
-    );
-    canvas.drawCircle(
-      c,
-      r,
-      Paint()
-        ..shader = ui.Gradient.linear(
-          c.translate(0, -r),
-          c.translate(0, r),
-          const [Color(0xFFE2E5E8), Color(0xFFC6CACE), Color(0xFFA9AEB3)],
-          const [0, 0.5, 1],
-        ),
-    );
-    canvas.drawCircle(
-      c,
-      r - 0.6,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.2
-        ..shader = ui.Gradient.linear(
-          c.translate(0, -r),
-          c.translate(0, r),
-          [Colors.white.withValues(alpha: 0.9), Colors.black.withValues(alpha: 0.2)],
-        ),
-    );
-    // Double flèche le long de la diagonale du coin.
-    final a = r * 0.45, head = r * 0.28;
-    final dir = Offset(side.toDouble(), 1) / 1.4142;
-    final from = c - dir * a, to = c + dir * a;
-    final across = Offset(-dir.dy, dir.dx);
-    final arrow = Path()
-      ..moveTo(from.dx, from.dy)
-      ..lineTo(to.dx, to.dy)
-      ..moveTo((to - dir * head + across * head).dx, (to - dir * head + across * head).dy)
-      ..lineTo(to.dx, to.dy)
-      ..lineTo((to - dir * head - across * head).dx, (to - dir * head - across * head).dy)
-      ..moveTo((from + dir * head + across * head).dx, (from + dir * head + across * head).dy)
-      ..lineTo(from.dx, from.dy)
-      ..lineTo((from + dir * head - across * head).dx, (from + dir * head - across * head).dy);
-    Paint stroke(Color color) => Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round
-      ..color = color;
-    canvas.drawPath(arrow.shift(const Offset(0, 1)), stroke(Colors.white.withValues(alpha: 0.7)));
-    canvas.drawPath(arrow, stroke(const Color(0xFF7C8085)));
-  }
-
-  @override
-  bool shouldRepaint(covariant _GripPainter old) => old.side != side;
 }

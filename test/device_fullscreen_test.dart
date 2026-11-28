@@ -287,9 +287,17 @@ void main() {
       addTearDown(mouse.removePointer);
       await mouse.addPointer(location: Offset.zero);
 
+      // La languette d'un coin du bas : au flanc, juste au-dessus de l'arrondi.
+      Offset tab(Rect dev, int side) {
+        // (Les poignées rapetissent avec lui, jusqu'à la moitié de leur taille.)
+        final k = (dev.height / const ClassicModel().size.height).clamp(0.5, 1.0);
+        final corner = const ClassicModel().cornerRadius * dev.height / const ClassicModel().size.height;
+        return Offset(side > 0 ? dev.right + 11 * k : dev.left - 11 * k, dev.bottom - corner - 25 * k);
+      }
+
       // Le pointeur approche du coin du bas à droite : sa poignée sort ; on la tire en biais.
-      final grip = home.bottomRight + const Offset(6, 6);
-      await mouse.moveTo(grip - const Offset(20, 20));
+      final grip = tab(home, 1);
+      await mouse.moveTo(grip - const Offset(20, 0));
       await settle(tester);
       await mouse.moveTo(grip);
       await tester.pump(const Duration(milliseconds: 200));
@@ -303,8 +311,8 @@ void main() {
       expect(smaller.center.dx, closeTo(home.center.dx, 1), reason: 'autour de son centre');
 
       // Le coin du bas à gauche, tiré vers l'extérieur : il regrandit.
-      final left = smaller.bottomLeft + const Offset(-6, 6);
-      await mouse.moveTo(left + const Offset(20, -20));
+      final left = tab(smaller, -1);
+      await mouse.moveTo(left + const Offset(20, 0));
       await settle(tester);
       await mouse.moveTo(left);
       await tester.pump(const Duration(milliseconds: 200));
