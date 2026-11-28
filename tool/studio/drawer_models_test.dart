@@ -31,12 +31,21 @@ void main() {
 
   for (final model in deviceModels) {
     testWidgets(model.id, (tester) async {
+      // Quatre albums : la bande du nano 5G montre quatre pochettes différentes.
+      const albums = [
+        ('Shelter from the Storm', 'Bob Dylan', 'Hard Rain', 'silver'),
+        ('Starless', 'King Crimson', 'Red', 'black'),
+        ('Northern Sky', 'Nick Drake', 'Bryter Layter', 'purple'),
+        ('Close to the Edge', 'Yes', 'Close to the Edge', 'green'),
+      ];
       final player = PlayerController.preview(
-        tracks: [const Track(id: '/x/a.mp3', title: 'Shelter from the Storm', artist: 'Bob Dylan', album: 'Hard Rain')],
-        albums: [const Album(title: 'Hard Rain', artist: 'Bob Dylan', firstIndex: 0, trackCount: 1)],
+        tracks: [for (final (t, a, al, _) in albums) Track(id: '/x/$al.mp3', title: t, artist: a, album: al)],
+        albums: [for (final (i, (_, a, al, _)) in albums.indexed) Album(title: al, artist: a, firstIndex: i, trackCount: 1)],
         index: 0,
         // La moitié droite du menu (classic, nano 3G) montre les pochettes.
-        albumCovers: {0: File('site/img/covers/silver.jpg').readAsBytesSync()},
+        albumCovers: {
+          for (final (i, (_, _, _, c)) in albums.indexed) i: File('site/img/covers/$c.jpg').readAsBytesSync(),
+        },
       );
       await showStage(tester, player, model);
       await decode(tester);

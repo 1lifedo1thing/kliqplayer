@@ -36,7 +36,7 @@ void main() {
       albums: [const Album(title: 'Album', artist: 'Artist', firstIndex: 0, trackCount: 1)],
       index: 0,
     );
-    await showStage(tester, player, Nano5Model(nano5Colors.firstWhere((c) => c.name == 'bleu')), size: const Size(620, 760));
+    await showStage(tester, player, Nano4Model(nano4Colors.firstWhere((c) => c.name == 'bleu')), size: const Size(620, 760));
 
     var n = 0, t = Duration.zero, at = const Offset(600, 740), down = false;
     final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
