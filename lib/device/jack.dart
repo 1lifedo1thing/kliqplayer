@@ -107,20 +107,7 @@ class JackPainter extends CustomPainter {
         ..scale(1, -1);
     }
     final exitY = fromBelow ? 2 * socket.dy - (size.height + 40 - shiftY) : -40.0 - shiftY;
-    if (fade > 0) {
-      final edge = exitY + 40; // le bord de la fenêtre
-      canvas.saveLayer(null, Paint());
-      _paintUpward(canvas, size, socket, exitY);
-      canvas.drawRect(
-        Rect.fromLTRB(-1e5, edge - 1e4, 1e5, edge + fade),
-        Paint()
-          ..blendMode = BlendMode.dstIn
-          ..shader = ui.Gradient.linear(Offset(0, edge), Offset(0, edge + fade), const [Color(0x00000000), Color(0xFF000000)]),
-      );
-      canvas.restore();
-    } else {
-      _paintUpward(canvas, size, socket, exitY);
-    }
+    _paintUpward(canvas, size, socket, exitY);
     canvas.restore();
   }
 
@@ -131,7 +118,21 @@ class JackPainter extends CustomPainter {
     final sleeveTop = bodyTop - JackGeometry.sleeveLength * s;
     final x = base.dx;
 
-    _cable(canvas, Offset(x, sleeveTop + 3 * s), Offset(anchorX, exitY));
+    // Fondu sur le câble noir seulement : il finit avant la gaine.
+    final edge = exitY + 40, end = math.min(edge + fade, sleeveTop - 4 * s);
+    if (fade > 0 && end > edge) {
+      canvas.saveLayer(null, Paint());
+      _cable(canvas, Offset(x, sleeveTop + 3 * s), Offset(anchorX, exitY));
+      canvas.drawRect(
+        Rect.fromLTRB(-1e5, edge - 1e4, 1e5, end),
+        Paint()
+          ..blendMode = BlendMode.dstIn
+          ..shader = ui.Gradient.linear(Offset(0, edge), Offset(0, end), const [Color(0x00000000), Color(0xFF000000)]),
+      );
+      canvas.restore();
+    } else {
+      _cable(canvas, Offset(x, sleeveTop + 3 * s), Offset(anchorX, exitY));
+    }
     _tip(canvas, size, socket, base);
     _sleeveShape(canvas, x, bodyTop, sleeveTop);
     _barrel(canvas, x, base.dy, bodyTop);
