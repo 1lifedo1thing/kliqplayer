@@ -7,7 +7,7 @@ import 'strings.dart';
 
 /// Version de l'appli, affichée dans Réglages › À propos. La même que dans
 /// pubspec.yaml (un test le vérifie).
-const appVersion = '1.4.1';
+const appVersion = '1.5.0';
 
 /// Page où télécharger la dernière version.
 const releasesUrl = 'https://github.com/Perzivalle/kliqplayer/releases/latest';
