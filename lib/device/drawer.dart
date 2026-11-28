@@ -346,7 +346,12 @@ class _SlotState extends State<_Slot> with SingleTickerProviderStateMixin {
     if (at == null || pos == null || !pos.hasPixels) return 0;
     final deficit = _fanNeed(at.height) - (at.top - top);
     if (deficit <= 0) return 0;
-    return math.min(deficit, math.max(0.0, pos.pixels - pos.minScrollExtent));
+    // (Mesuré à l'écran ; le défilement compte en unités du tiroir, qui est
+    // réduit avec l'appareil.)
+    final clip = context.findAncestorRenderObjectOfType<RenderClipRect>();
+    final b = _bounds;
+    final k = clip != null && clip.hasSize && b != null && clip.size.height > 0 ? b.height / clip.size.height : 1.0;
+    return math.min(deficit / k, math.max(0.0, pos.pixels - pos.minScrollExtent));
   }
 
   /// Teinte survolée parmi les pastilles : l'appareil la prend le temps du

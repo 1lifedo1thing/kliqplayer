@@ -450,7 +450,8 @@ void main() {
     for (var i = 0; i < 400; i++) {
       await tester.pump(const Duration(milliseconds: 16));
       final f = find.byType(DeviceDrawer);
-      if (f.evaluate().isNotEmpty) heights.add(tester.getSize(f).height);
+      // (À l'écran : son contenu est disposé à sa taille normale, puis réduit.)
+      if (f.evaluate().isNotEmpty) heights.add(tester.getRect(f).height);
     }
     expect(find.byWidgetPredicate((w) => w is DeviceBody && w.model is Shuffle4Model), findsOneWidget);
     var jump = 0.0;

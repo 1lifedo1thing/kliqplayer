@@ -614,6 +614,7 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
     super.initState();
     widget.player.setForcedShuffle(_shuffles(_model));
     if (_win != null) WidgetsBinding.instance.addPostFrameCallback((_) => _takeWindow());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _limitWindow());
     _takeFullWindow();
     deviceFree.addListener(_freeChanged);
     _focusWatch; // (créé maintenant : il n'écoute qu'une fois construit)
@@ -1152,6 +1153,7 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
       _model = m;
       _shown[m.family] = m;
     });
+    _limitWindow();
     if (_remember) Settings.setString(_settingsKey, m.id);
   }
 
@@ -1293,23 +1295,27 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
     final left = (w - size.width - pad.horizontal) / 2 + pad.left;
     final top = (h - size.height - pad.vertical) / 2 + pad.top;
     final device = Rect.fromLTWH(left, top, size.width, size.height);
+    // Le tiroir à la mesure de l'appareil tel qu'on le voit (rapetissé avec les poignées compris).
+    final shown = device.height * _sizeScale;
+    final ds = _drawerScaleFor(m, shown);
 
     if (_managedPadding(w, h) != null) {
       // La fenêtre fait la place au tiroir : l'appareil ne bouge pas.
       return (
         device: device,
         cornerRadius: m.cornerRadius * f,
-        drawerW: _managedDrawerW(device.width),
+        drawerW: _managedDrawerW(device.width) * ds,
         room: 1.0,
         shiftRight: 0.0,
         shiftLeft: 0.0,
-        drawerHeight: device.height * 0.9,
+        drawerHeight: shown * 0.9,
+        drawerScale: ds,
       );
     }
     // L'appareil (réduit jusqu'à 55 %) et le tiroir doivent tenir côte à
     // côte avec une petite marge.
     const margin = 14.0;
-    final drawerW = math.max(140.0, math.min((w * 0.5).clamp(230.0, 460.0), w - 2 * margin - device.width * 0.55 + _tuck));
+    final drawerW = math.max(140.0, math.min((w * 0.5).clamp(230.0, 460.0), w - 2 * margin - device.width * 0.55 + _tuck)) * ds;
     final room = ((w - 2 * margin - drawerW + _tuck) / device.width).clamp(0.55, 1.0);
     final devW = device.width * room;
     final groupLeft = (w - (devW + drawerW - _tuck)) / 2;
@@ -1325,7 +1331,8 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
       // Un peu moins haut que l'appareil au repos : il sort de derrière lui,
       // à sa mesure (en changeant d'appareil, il grandit ou rétrécit en
       // douceur, voir [_morph]).
-      drawerHeight: device.height * 0.9,
+      drawerHeight: shown * 0.9,
+      drawerScale: ds,
     );
   }
 
@@ -1341,13 +1348,30 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
   /// écran (Windows) rien ne le borne : il prend celle qu'il a dans sa propre
   /// fenêtre (Linux), où les grands modèles sont réduits pour tenir. Les
   /// modèles gardent ainsi entre eux les mêmes proportions partout.
-  double get _homeFit {
-    if (!_dragsInside) return 1;
-    final m = _model, win = m.windowSize, cable = win.height * 0.2;
+  double get _homeFit => _dragsInside ? _naturalFit(_model) : 1;
+
+  /// Part de sa taille dessinée qu'a l'appareil [m] dans sa fenêtre de départ
+  /// ([DeviceModel.windowSize]) : sa taille « normale » à l'écran.
+  static double _naturalFit(DeviceModel m) {
+    final win = m.windowSize, cable = win.height * 0.2;
     final pad = m.jackOnTop
         ? m.margin.copyWith(top: math.max(m.margin.top, cable))
         : m.margin.copyWith(bottom: math.max(m.margin.bottom, cable));
     return math.min(1.0, math.min((win.width - pad.horizontal) / m.size.width, (win.height - pad.vertical) / m.size.height));
+  }
+
+  /// Le tiroir suit l'appareil quand il est plus petit que sa taille normale
+  /// (petite fenêtre, ou rapetissé avec les poignées), jusqu'à la moitié.
+  static double _drawerScaleFor(DeviceModel m, double shownHeight) =>
+      (shownHeight / (m.size.height * _naturalFit(m))).clamp(0.5, 1.0);
+
+  /// Linux : la fenêtre ne descend pas sous la moitié de sa taille de départ
+  /// (l'appareil y serait réduit à presque rien).
+  void _limitWindow() {
+    if (!_remember || !Platform.isLinux || _dragsInside) return;
+    try {
+      WindowManager.instance.getCurrent()?.minimumSize = (_model.windowSize * 0.5).toNative();
+    } catch (_) {}
   }
 
   /// Hauteur gardée pour le câble. En plein écran (Windows) elle est
@@ -1708,7 +1732,7 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
                     child: Stack(
                       children: [
                         Positioned.fromRect(
-                          rect: drawerRect.inflate(_shadowPad),
+                          rect: drawerRect.inflate(_shadowPad * g.drawerScale),
                           // Rangé et au repos, il n'est pas dessiné du tout
                           // (sa photo reste prête) : l'écran qui s'anime en
                           // lecture ne le recompose pas à chaque image.
@@ -1716,7 +1740,20 @@ class _DeviceStageState extends State<DeviceStage> with SingleTickerProviderStat
                             offstage: _drawerIdle,
                             // Disposé pour sa taille d'arrivée : pendant qu'il
                             // change de taille, seule la coque suit.
-                            child: _drawer(target.drawerW - _tuck, right, Size(target.drawerW, target.drawerHeight)),
+                            // Disposé à sa taille normale, puis réduit avec l'appareil.
+                            child: FittedBox(
+                              fit: BoxFit.fill,
+                              // (Sa taille du moment, réduite d'autant partout : rien n'est étiré.)
+                              child: SizedBox(
+                                width: drawerW / g.drawerScale + 2 * _shadowPad,
+                                height: g.drawerHeight / g.drawerScale + 2 * _shadowPad,
+                                child: _drawer(
+                                  target.drawerW / target.drawerScale - _tuck,
+                                  right,
+                                  Size(target.drawerW, target.drawerHeight) / target.drawerScale,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -1788,6 +1825,9 @@ typedef _Geo = ({
   double shiftRight,
   double shiftLeft,
   double drawerHeight,
+
+  /// Le contenu du tiroir, réduit avec l'appareil (1 : sa taille normale).
+  double drawerScale,
 });
 
 _Geo _lerpGeo(_Geo a, _Geo b, double t) {
@@ -1800,5 +1840,6 @@ _Geo _lerpGeo(_Geo a, _Geo b, double t) {
     shiftRight: l(a.shiftRight, b.shiftRight),
     shiftLeft: l(a.shiftLeft, b.shiftLeft),
     drawerHeight: l(a.drawerHeight, b.drawerHeight),
+    drawerScale: l(a.drawerScale, b.drawerScale),
   );
 }
